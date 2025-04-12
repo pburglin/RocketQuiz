@@ -8,7 +8,9 @@ interface Question {
   correctAnswer: number;
 }
 
-const CreateQuiz: React.FC = () => {
+import { User as FirebaseUser } from "firebase/auth";
+
+const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<Question[]>([
@@ -98,6 +100,29 @@ const CreateQuiz: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">Create a New Quiz</h1>
+        <div className="mb-6 text-lg text-gray-700">
+          Only registered users can create quizzes and start multiplayer quizzes.
+        </div>
+        <a
+          href="/register"
+          className="inline-block px-6 py-3 rounded-lg bg-emerald-600 text-white font-semibold text-lg shadow hover:bg-emerald-700 transition"
+        >
+          Register an Account
+        </a>
+        <div className="mt-4">
+          Already have an account?{" "}
+          <a href="/login" className="text-emerald-600 hover:underline">
+            Login
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
