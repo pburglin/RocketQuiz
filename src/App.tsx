@@ -24,7 +24,7 @@ function App() {
       <Navbar user={user ? { name: user.email || "User" } : undefined} />
       <div className="pt-16">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home user={user} />} />
           <Route path="/search" element={<SearchQuiz />} />
           <Route path="/create-quiz" element={<CreateQuiz user={user} />} />
           <Route path="/login" element={<Login />} />

@@ -2,8 +2,13 @@ import Navbar from "../components/Navbar";
 import FeaturedQuizzes from "../components/FeaturedQuizzes";
 import Footer from "../components/Footer";
 import { Rocket } from "lucide-react";
+import { User as FirebaseUser } from "firebase/auth";
 
-export default function Home() {
+type HomeProps = {
+  user: FirebaseUser | null;
+};
+
+export default function Home({ user }: HomeProps) {
   return (
     <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-100 min-h-screen flex flex-col">
       <Navbar />
@@ -25,12 +30,14 @@ export default function Home() {
               >
                 Discover Quizzes
               </a>
-              <a
-                href="/register"
-                className="px-6 py-3 rounded-lg bg-white border border-emerald-500 text-emerald-600 font-semibold text-lg shadow hover:bg-emerald-50 transition"
-              >
-                Create Account
-              </a>
+              {!user && (
+                <a
+                  href="/register"
+                  className="px-6 py-3 rounded-lg bg-white border border-emerald-500 text-emerald-600 font-semibold text-lg shadow hover:bg-emerald-50 transition"
+                >
+                  Create Account
+                </a>
+              )}
             </div>
           </div>
           <div className="flex-1 flex justify-center">
