@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import SearchQuiz from "./pages/SearchQuiz";
 import CreateQuiz from "./pages/CreateQuiz";
+import PlayQuiz from "./pages/PlayQuiz";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Navbar from "./components/Navbar";
@@ -29,7 +30,8 @@ function App() {
           <Route path="/create-quiz" element={<CreateQuiz user={user} />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-        </Routes>
+            <Route path="/quiz/:id" element={<PlayQuiz user={user} />} />
+          </Routes>
       </div>
     </Router>
   );
