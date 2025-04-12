@@ -1,4 +1,5 @@
 import { Tag } from "lucide-react";
+import ColorCardPlaceholder from "./ColorCardPlaceholder";
 
 export default function QuizCard({
   quiz,
@@ -18,12 +19,20 @@ export default function QuizCard({
       href={`/quiz/${quiz.id}`}
       className="min-w-[300px] max-w-xs bg-white rounded-xl shadow-lg hover:shadow-2xl transition flex flex-col overflow-hidden border border-gray-100"
     >
-      <img
-        src={quiz.image}
-        alt={quiz.title}
-        className="h-40 w-full object-cover"
-        loading="lazy"
-      />
+      {quiz.image && quiz.image.trim() !== "" ? (
+        <img
+          src={quiz.image}
+          alt={quiz.title}
+          className="h-40 w-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <ColorCardPlaceholder
+          id={quiz.id}
+          text={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
+          className="h-40 w-full"
+        />
+      )}
       <div className="p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-lg text-gray-800 mb-1">{quiz.title}</h3>
         <p className="text-gray-500 text-sm mb-2 line-clamp-2">{quiz.description}</p>
