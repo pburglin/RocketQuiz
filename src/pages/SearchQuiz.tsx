@@ -1,36 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Filter, Star, Globe, Tag } from "lucide-react";
 import QuizCard from "../components/QuizCard";
+import { db } from "../firebaseClient";
+import { collection, getDocs } from "firebase/firestore";
 
-const mockQuizzes = [
-  {
-    id: "1",
-    title: "World Capitals",
-    description: "Test your knowledge of world capitals.",
-    language: "English",
-    tags: ["Geography", "World"],
-    popularity: 87,
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: "2",
-    title: "Space Exploration",
-    description: "How much do you know about space missions?",
-    language: "English",
-    tags: ["Science", "Space"],
-    popularity: 92,
-    image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: "3",
-    title: "Famous Paintings",
-    description: "Identify the world's most famous artworks.",
-    language: "English",
-    tags: ["Art", "History"],
-    popularity: 75,
-    image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=400&q=80",
-  },
-];
 
 const allTags = [
   "Geography",
@@ -56,19 +29,44 @@ export default function SearchQuiz() {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [popularity, setPopularity] = useState(0);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredQuizzes = mockQuizzes.filter((quiz) => {
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const querySnapshot = await getDocs(collection(db, "quizzes"));
+        const quizList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setQuizzes(quizList);
+      } catch (err: any) {
+        setError("Failed to load quizzes.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
+
+  const filteredQuizzes = quizzes.filter((quiz) => {
     const matchesSearch =
-      quiz.title.toLowerCase().includes(search.toLowerCase()) ||
-      quiz.description.toLowerCase().includes(search.toLowerCase());
+      quiz.title?.toLowerCase().includes(search.toLowerCase()) ||
+      quiz.description?.toLowerCase().includes(search.toLowerCase());
     const matchesLanguage =
       selectedLanguage === "" ||
-      quiz.language.toLowerCase() ===
+      quiz.language?.toLowerCase() ===
         languages.find((l) => l.code === selectedLanguage)?.label.toLowerCase();
     const matchesTags =
       selectedTags.length === 0 ||
-      selectedTags.every((tag) => quiz.tags.includes(tag));
-    const matchesPopularity = quiz.popularity >= popularity;
+      (quiz.tags && selectedTags.every((tag) => quiz.tags.includes(tag)));
+    // If popularity is not present, treat as 0
+    const quizPopularity = typeof quiz.popularity === "number" ? quiz.popularity : 0;
+    const matchesPopularity = quizPopularity >= popularity;
     return (
       matchesSearch && matchesLanguage && matchesTags && matchesPopularity
     );
@@ -150,7 +148,15 @@ export default function SearchQuiz() {
         </div>
         {/* Quiz List/Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuizzes.length === 0 ? (
+          {loading ? (
+            <div className="col-span-full text-center text-gray-500 py-12">
+              Loading quizzes...
+            </div>
+          ) : error ? (
+            <div className="col-span-full text-center text-red-500 py-12">
+              {error}
+            </div>
+          ) : filteredQuizzes.length === 0 ? (
             <div className="col-span-full text-center text-gray-500 py-12">
               No quizzes found. Try adjusting your filters.
             </div>
