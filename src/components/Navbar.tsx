@@ -1,5 +1,7 @@
 import { LogIn, User, Rocket, Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebaseClient";
 
 export default function Navbar({ user }: { user?: { name: string } }) {
   return (
@@ -21,17 +23,24 @@ export default function Navbar({ user }: { user?: { name: string } }) {
             to="/create-quiz"
             className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
           >
-            <span className="material-icons w-5 h-5" style={{ fontSize: 20 }}>add_circle</span>
             <span className="hidden sm:inline">Create Quiz</span>
           </Link>
           {user ? (
-            <Link
-              to="/profile"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
-            >
-              <User className="w-5 h-5" />
-              <span className="hidden sm:inline">{user.name}</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
+              >
+                <User className="w-5 h-5" />
+                <span className="hidden sm:inline">{user.name}</span>
+              </Link>
+              <button
+                onClick={() => signOut(auth)}
+                className="ml-2 px-4 py-1.5 rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+              >
+                Logout
+              </button>
+            </div>
           ) : (
             <>
               <Link
