@@ -25,6 +25,11 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // AI generation state
+  const [aiDescription, setAIDescription] = useState("");
+  const [aiLoading, setAILoading] = useState(false);
+  const [aiError, setAIError] = useState<string | null>(null);
+
   const handleQuestionChange = (index: number, value: string) => {
     const updated = [...questions];
     updated[index].question = value;
@@ -58,6 +63,119 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
+  // AI Quiz Generation Handler
+  const handleAIGenerate = async () => {
+    setAILoading(true);
+    setAIError(null);
+    try {
+      const apiUrl = import.meta.env.VITE_LLM_API_URL;
+      const apiKey = import.meta.env.VITE_LLM_API_KEY;
+      const modelName = import.meta.env.VITE_LLM_MODEL_NAME;
+      if (!apiUrl) {
+        setAIError("LLM API URL is not configured.");
+        setAILoading(false);
+        return;
+      }
+      // Payload for Mistral (or OpenAI-style) chat completions API
+      const payload = {
+        model: modelName,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a quiz generator. Respond ONLY with a JSON object with the following structure: {\"title\": string, \"description\": string, \"language\": string, \"tags\": string[], \"image\": string, \"questions\": [{\"question\": string, \"answers\": string[], \"correctAnswer\": number, \"image\": string, \"time\": number}]}. Example: {\"title\": \"World Capitals Quiz\", \"description\": \"A quiz about world capitals.\", \"language\": \"English\", \"tags\": [\"geography\", \"capitals\"], \"image\": \"\", \"questions\": [{\"question\": \"What is the capital of France?\", \"answers\": [\"London\", \"Paris\", \"Berlin\", \"Madrid\"], \"correctAnswer\": 1, \"image\": \"\", \"time\": 30}]}. Do not include any text or explanation outside the JSON object."
+          },
+          {
+            role: "user",
+            content: aiDescription
+          }
+        ]
+        // Add other params as needed (e.g., temperature)
+      };
+      console.log("[AI GENERATE] Request payload:", payload);
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "Authorization": `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      console.log("[AI GENERATE] Response status:", response.status, response.statusText);
+      const responseText = await response.text();
+      console.log("[AI GENERATE] Raw response text:", responseText);
+
+      if (!response.ok) {
+        throw new Error(`LLM API error: ${response.statusText} (status ${response.status})`);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("[AI GENERATE] Failed to parse response as JSON:", responseText);
+        throw new Error("Failed to parse LLM API response as JSON.");
+      }
+
+      // For Mistral/OpenAI-style APIs, the quiz is in choices[0].message.content as a JSON string
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error("No content returned from LLM API.");
+      }
+      let quizObj;
+      try {
+        // Remove code block markers and leading/trailing whitespace
+        let cleaned = content.trim();
+        if (cleaned.startsWith("```json")) {
+          cleaned = cleaned.slice(7);
+        }
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.slice(3);
+        }
+        if (cleaned.endsWith("```")) {
+          cleaned = cleaned.slice(0, -3);
+        }
+        cleaned = cleaned.trim();
+        // Try to parse. If result is a string, parse again (double-encoded JSON)
+        let parsed = JSON.parse(cleaned);
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(parsed);
+        }
+        quizObj = parsed;
+      } catch (e) {
+        console.error("[AI GENERATE] Failed to parse LLM message content as JSON:", content);
+        throw new Error("Failed to parse LLM response as JSON. Response: " + content);
+      }
+
+      // Expecting quizObj to have: title, description, questions (array)
+      if (!quizObj || !quizObj.questions || !Array.isArray(quizObj.questions)) {
+        console.error("[AI GENERATE] Invalid quiz object from LLM API:", quizObj);
+        throw new Error("Invalid quiz object from LLM API.");
+      }
+
+      setTitle(quizObj.title || "");
+      setDescription(quizObj.description || "");
+      setLanguage(quizObj.language || "");
+      setTags(Array.isArray(quizObj.tags) ? quizObj.tags.join(", ") : (quizObj.tags || ""));
+      setImage(quizObj.image || "");
+      // Map questions to our Question type, with defaults
+      setQuestions(
+        quizObj.questions.map((q: any) => ({
+          question: q.question || "",
+          answers: Array.isArray(q.answers) ? q.answers : ["", "", "", ""],
+          correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0,
+          image: q.image || "",
+          time: typeof q.time === "number" ? q.time : 30,
+        }))
+      );
+    } catch (err: any) {
+      console.error("[AI GENERATE] Error:", err);
+      setAIError(err.message || "Failed to generate quiz with AI.");
+    } finally {
+      setAILoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -74,6 +192,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         language: language.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         image: image.trim(),
+        questionsCount: questions.length,
       });
   
       // Use a batch for all questions and answers
@@ -145,6 +264,32 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       {error && <div className="mb-4 text-red-600">{error}</div>}
       {success && <div className="mb-4 text-green-600">Quiz created successfully!</div>}
       {loading && <div className="mb-4 text-gray-600">Saving quiz...</div>}
+
+      {/* AI Quiz Generation Section */}
+      <div className="mb-8 p-4 border rounded bg-blue-50">
+        <h2 className="text-lg font-semibold mb-2">Generate Quiz with AI</h2>
+        <label className="block mb-1 font-medium">Describe the quiz you want to generate</label>
+        <textarea
+          className="w-full border rounded p-2 mb-2"
+          value={aiDescription}
+          onChange={(e) => setAIDescription(e.target.value)}
+          placeholder="e.g. A 5-question quiz about world capitals, with 4 answer choices per question."
+          rows={3}
+        />
+        <button
+          type="button"
+          className="bg-emerald-600 text-white px-4 py-2 rounded font-bold"
+          onClick={handleAIGenerate}
+          disabled={aiLoading || !aiDescription.trim()}
+        >
+          {aiLoading ? "Generating..." : "Generate with AI"}
+        </button>
+        {aiError && <div className="mt-2 text-red-600">{aiError}</div>}
+        <div className="mt-2 text-gray-600 text-sm">
+          The generated quiz will fill the form below. You can review and edit before saving.
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block font-semibold">Title</label>

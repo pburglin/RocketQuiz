@@ -32,6 +32,7 @@ export default function SearchQuiz() {
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gameLength, setGameLength] = useState(""); // "", "quick", "medium", "long"
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -67,8 +68,23 @@ export default function SearchQuiz() {
     // If popularity is not present, treat as 0
     const quizPopularity = typeof quiz.popularity === "number" ? quiz.popularity : 0;
     const matchesPopularity = quizPopularity >= popularity;
+
+    let matchesGameLength = true;
+    if (gameLength && typeof quiz.questionsCount === "number") {
+      if (gameLength === "quick") {
+        matchesGameLength = quiz.questionsCount < 10;
+      } else if (gameLength === "medium") {
+        matchesGameLength = quiz.questionsCount >= 10 && quiz.questionsCount <= 20;
+      } else if (gameLength === "long") {
+        matchesGameLength = quiz.questionsCount > 20;
+      }
+    } else if (gameLength) {
+      // If filter is set but questionsCount is missing, exclude quiz
+      matchesGameLength = false;
+    }
+
     return (
-      matchesSearch && matchesLanguage && matchesTags && matchesPopularity
+      matchesSearch && matchesLanguage && matchesTags && matchesPopularity && matchesGameLength
     );
   });
 
@@ -131,6 +147,56 @@ export default function SearchQuiz() {
                 {tag}
               </button>
             ))}
+          </div>
+          {/* Game Length Filter */}
+          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[260px]">
+            <span className="mr-2 text-gray-600 font-medium">Game Length:</span>
+            <div className="flex gap-2">
+              <label className="flex items-center gap-1 text-sm">
+                <input
+                  type="radio"
+                  name="gameLength"
+                  value=""
+                  checked={gameLength === ""}
+                  onChange={() => setGameLength("")}
+                  className="accent-indigo-500"
+                />
+                Any
+              </label>
+              <label className="flex items-center gap-1 text-sm">
+                <input
+                  type="radio"
+                  name="gameLength"
+                  value="quick"
+                  checked={gameLength === "quick"}
+                  onChange={() => setGameLength("quick")}
+                  className="accent-indigo-500"
+                />
+                Quick {"(<10)"}
+              </label>
+              <label className="flex items-center gap-1 text-sm">
+                <input
+                  type="radio"
+                  name="gameLength"
+                  value="medium"
+                  checked={gameLength === "medium"}
+                  onChange={() => setGameLength("medium")}
+                  className="accent-indigo-500"
+                />
+                Medium {"(10-20)"}
+              </label>
+              <label className="flex items-center gap-1 text-sm">
+                <input
+                  type="radio"
+                  name="gameLength"
+                  value="long"
+                  checked={gameLength === "long"}
+                  onChange={() => setGameLength("long")}
+                  className="accent-indigo-500"
+                />
+                Long {">20"}
+              </label>
+            </div>
           </div>
           {/* Popularity Slider */}
           <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[200px]">
