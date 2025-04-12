@@ -1,0 +1,51 @@
+import Navbar from "../components/Navbar";
+import FeaturedQuizzes from "../components/FeaturedQuizzes";
+import Footer from "../components/Footer";
+import { Rocket } from "lucide-react";
+
+export default function Home() {
+  return (
+    <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-100 min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 pt-20">
+        {/* Hero Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-8 py-16 flex flex-col md:flex-row items-center gap-10">
+          <div className="flex-1">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4 flex items-center gap-3">
+              <Rocket className="w-10 h-10 text-emerald-500" />
+              RocketQuiz
+            </h1>
+            <p className="text-lg sm:text-xl text-gray-600 mb-6">
+              The next-generation multiplayer quiz platform. Play, compete, and create quizzes with friends or the world. Fast, fun, and always free.
+            </p>
+            <div className="flex gap-4">
+              <a
+                href="/search"
+                className="px-6 py-3 rounded-lg bg-emerald-500 text-white font-semibold text-lg shadow hover:bg-emerald-600 transition"
+              >
+                Discover Quizzes
+              </a>
+              <a
+                href="/register"
+                className="px-6 py-3 rounded-lg bg-white border border-emerald-500 text-emerald-600 font-semibold text-lg shadow hover:bg-emerald-50 transition"
+              >
+                Create Account
+              </a>
+            </div>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <img
+              src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=600&q=80"
+              alt="Quiz fun"
+              className="rounded-2xl shadow-2xl w-full max-w-md object-cover"
+              loading="lazy"
+            />
+          </div>
+        </section>
+        {/* Featured Quizzes */}
+        <FeaturedQuizzes />
+      </main>
+      <Footer />
+    </div>
+  );
+}
