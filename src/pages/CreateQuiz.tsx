@@ -65,6 +65,10 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         title,
         description,
         createdAt: new Date(),
+        createdBy: user?.uid || null,
+        language: "",
+        tags: [],
+        image: ""
       });
 
       // Use a batch for all questions and answers
@@ -95,6 +99,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setDescription("");
       setQuestions([{ question: "", answers: ["", "", "", ""], correctAnswer: 0 }]);
     } catch (err) {
+      console.error("Quiz creation error:", err);
       setError("Failed to create quiz.");
     } finally {
       setLoading(false);
