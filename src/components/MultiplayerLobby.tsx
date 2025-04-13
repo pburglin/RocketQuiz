@@ -119,6 +119,11 @@ export default function MultiplayerLobby({
                         { merge: true }
                       );
                       setPlayers((prev: string[]) => [...prev, nickname]);
+                      // Persist nickname and isOrganizer in localStorage for multiplayer game page
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("mp_nickname", nickname);
+                        localStorage.setItem("mp_isOrganizer", isOrganizer ? "true" : "false");
+                      }
                     } catch (err) {
                       setNicknameError("Failed to join lobby. Please try again.");
                     }

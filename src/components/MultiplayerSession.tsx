@@ -139,7 +139,12 @@ export default function MultiplayerSession({
       {mpShowAnswer && (
         <div className="mb-4 text-center text-green-700 font-semibold">
           Correct answer shown!{" "}
-          {isLastQuestion ? "Quiz complete." : "Click Next to continue."}
+          {isLastQuestion
+            ? "Quiz complete."
+            : isOrganizer
+              ? "Click Next to continue."
+              : "Waiting on the game organizer to continue."
+          }
         </div>
       )}
       {/* Leaderboard */}
