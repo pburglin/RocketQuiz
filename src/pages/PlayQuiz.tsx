@@ -51,6 +51,17 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [isOrganizer, setIsOrganizer] = useState<boolean>(false);
   const [lobbyLoading, setLobbyLoading] = useState<boolean>(false);
 
+  // On mount, check for session param and set gameState/sessionId if present
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("session");
+    if (sid) {
+      setGameState("multi-lobby");
+      setSessionId(sid);
+      setIsOrganizer(false);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchQuiz = async () => {
       setLoading(true);
@@ -140,7 +151,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // Create multiplayer session when entering lobby
   useEffect(() => {
-    if (gameState === "multi-lobby" && !sessionId && quiz) {
+    // Only create a new session if there is no session param in the URL
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("session");
+    if (gameState === "multi-lobby" && !sessionId && quiz && !sid) {
       // Organizer creates session
       const newSessionId = uuidv4();
       const sessionRef = doc(collection(db, "sessions"), newSessionId);
@@ -157,15 +171,9 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         setLobbyLoading(false);
       });
     }
-    // If joining as a player (not organizer), parse sessionId from URL
-    if (gameState === "multi-lobby" && !sessionId && quiz) {
-      const params = new URLSearchParams(window.location.search);
-      const sid = params.get("session");
-      if (sid) {
-        setSessionId(sid);
-        setIsOrganizer(false);
-        setSessionUrl(`${window.location.origin}/play/quiz/${quiz.id}?session=${sid}`);
-      }
+    // If joining as a player, set the sessionUrl when quiz is loaded
+    if (gameState === "multi-lobby" && sessionId && quiz && sid) {
+      setSessionUrl(`${window.location.origin}/play/quiz/${quiz.id}?session=${sid}`);
     }
   }, [gameState, sessionId, quiz]);
 
