@@ -90,21 +90,11 @@ export default function MultiplayerGamePage() {
     }
   }, [nickname]);
 
-  // Session logic: get sessionId from URL and determine organizer
+  // Session logic: get sessionId from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("session");
     if (sid) setSessionId(sid);
-    // Organizer if no "session" param in URL (copied from lobby logic)
-    setIsOrganizer(!sid);
-  }, []);
-
-  // On mount, try to get isOrganizer from localStorage if not already set
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("mp_isOrganizer");
-      if (stored) setIsOrganizer(stored === "true");
-    }
   }, []);
 
   // Listen for currentQuestion in session doc (sync all clients)
@@ -177,17 +167,6 @@ export default function MultiplayerGamePage() {
     };
   }, [current, questions]);
 
- // Listen for gameFinished in session doc and navigate to results
- useEffect(() => {
-   if (!sessionId) return;
-   const sessionRef = doc(db, "sessions", sessionId);
-   const unsub = onSnapshot(sessionRef, (snap) => {
-     if (snap.exists() && snap.data().gameFinished) {
-       navigate(`/play/quiz/${id}/results?session=${sessionId}`);
-     }
-   });
-   return () => unsub();
- }, [sessionId, id, navigate]);
 
  // Next question countdown logic (organizer controls progression)
  useEffect(() => {
@@ -199,8 +178,11 @@ export default function MultiplayerGamePage() {
          const sessionRef = doc(db, "sessions", sessionId);
          setDoc(sessionRef, { currentQuestion: current + 1, [`questionStarts.${current + 1}`]: serverTimestamp() }, { merge: true });
        } else {
-         // Quiz finished, navigate to results or show final leaderboard
-         navigate(`/play/quiz/${id}/results`);
+         // Quiz finished, set gameFinished: true in session doc
+         const sessionRef = doc(db, "sessions", sessionId);
+         setDoc(sessionRef, {
+           gameFinished: true,
+         }, { merge: true });
        }
      }
      return;
@@ -350,6 +332,7 @@ export default function MultiplayerGamePage() {
       players={players}
       nickname={nickname}
       sessionId={sessionId}
+      isOrganizer={isOrganizer}
       submitMpAnswer={async (idx: number) => {
         console.log("submitMpAnswer called", { idx, sessionId, nickname, current });
         if (!sessionId || !nickname) {

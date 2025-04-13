@@ -150,15 +150,33 @@ export default function MultiplayerSession({
       {/* Leaderboard */}
       {mpShowAnswer && (
         <div className="mb-6">
-          <div className="font-bold mb-2">Leaderboard</div>
+          <div className="font-bold mb-2">Leaderboard (This Question)</div>
           <ul className="list-decimal pl-6">
-            {mpLeaderboard.map((nick: string, i: number) => (
-              <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                {nick}: {mpScores[nick] || 0} pts
-                {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                {nick === nickname && " (You)"}
-              </li>
-            ))}
+            {players.map((nick: string, i: number) => {
+              // Find this player's answer for the current question
+              const ans = mpAllAnswers.find((a: any) => a.nickname === nick && a.qIdx === current);
+              let points = 0;
+              if (ans && ans.answer === q.correctAnswer && typeof ans.answeredAt?.toMillis === "function" && q.time) {
+                // Calculate speed bonus
+                const questionStart = q.questionStart ? q.questionStart : null;
+                if (questionStart) {
+                  const answeredAt = ans.answeredAt.toMillis();
+                  const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000);
+                  const maxTime = q.time || 30;
+                  const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+                  points = 1000 + speedBonus;
+                } else {
+                  points = 1000; // fallback if no timing
+                }
+              }
+              // Show 0 for no answer or wrong answer
+              return (
+                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
+                  {nick}: {points} pts
+                  {nick === nickname && " (You)"}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
