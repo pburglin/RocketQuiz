@@ -38,6 +38,14 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [timer, setTimer] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const nextTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Single player scoring
+  const [spScore, setSpScore] = useState(0);
+  const [spSelected, setSpSelected] = useState<number | null>(null);
+
+  // Countdown for next question
+  const [nextQuestionTimer, setNextQuestionTimer] = useState<number | null>(null);
 
   // Collapsed state for questions
   const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
@@ -158,6 +166,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         if (prev <= 1) {
           clearInterval(timerRef.current as NodeJS.Timeout);
           setShowAnswer(true);
+          setNextQuestionTimer(10); // Start 10s countdown
           return 0;
         }
         return prev - 1;
@@ -216,6 +225,44 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       return () => unsub();
     }
   }, [sessionId, gameState]);
+
+  // Countdown timer for next question
+  useEffect(() => {
+    if (nextQuestionTimer === null || nextQuestionTimer <= 0) {
+      if (nextTimerRef.current) clearInterval(nextTimerRef.current);
+      return;
+    }
+    nextTimerRef.current = setInterval(() => {
+      setNextQuestionTimer((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(nextTimerRef.current as NodeJS.Timeout);
+          // Automatically go to next question
+          if (current < questions.length - 1) {
+            setCurrent((c) => c + 1);
+            setShowAnswer(false);
+            setSpSelected(null); // Reset single player selection
+            setMpShowAnswer(false); // Reset multiplayer state
+            setMpAnswered(false);
+            setMpSelected(null);
+            setMpAllAnswers([]);
+          } else {
+            setGameState("pre"); // Or show final results
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (nextTimerRef.current) clearInterval(nextTimerRef.current);
+    };
+  }, [nextQuestionTimer, current, questions.length]);
+
+  // Reset next question timer when question changes
+  useEffect(() => {
+    setNextQuestionTimer(null);
+    if (nextTimerRef.current) clearInterval(nextTimerRef.current);
+  }, [current]);
 
   // Listen for session start
   useEffect(() => {
@@ -354,6 +401,21 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // SINGLE PLAYER: Show original question/answer UI
   if (gameState === "single") {
+    // Single player: handle answer click
+    const handleSinglePlayerAnswer = (idx: number) => {
+      if (showAnswer) return;
+      setSpSelected(idx);
+      setShowAnswer(true);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setNextQuestionTimer(10); // Start 10s countdown
+      // Scoring
+      if (idx === q.correctAnswer) {
+        const base = 100;
+        const bonus = Math.floor((timer / q.time) * 100);
+        setSpScore((prev) => prev + base + bonus);
+      }
+    };
+
     return (
       <div className="max-w-2xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
@@ -403,15 +465,21 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
                   showAnswer
                     ? idx === q.correctAnswer
                       ? "bg-green-200 border-green-400 font-bold"
-                      : "bg-red-100 border-gray-200"
+                      : idx === spSelected
+                      ? "bg-red-100 border-gray-200"
+                      : "bg-white border-gray-200"
                     : "bg-white border-gray-200 hover:bg-emerald-50"
                 }
               `}
-              disabled={!showAnswer}
+              disabled={showAnswer}
+              onClick={() => handleSinglePlayerAnswer(idx)}
             >
               {answer}
               {showAnswer && idx === q.correctAnswer && (
                 <span className="ml-2 text-green-700 font-bold">(Correct)</span>
+              )}
+              {showAnswer && idx === spSelected && idx !== q.correctAnswer && (
+                <span className="ml-2 text-red-700 font-bold">(Your pick)</span>
               )}
             </button>
           ))}
@@ -427,6 +495,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
             {current < questions.length - 1 ? "Click Next to continue." : "Quiz complete."}
           </div>
         )}
+        {/* Show score after each question */}
+        <div className="mb-4 text-center text-blue-700 font-bold">
+          Score: {spScore}
+        </div>
         <div className="flex justify-between">
           <button
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
@@ -440,9 +512,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
               onClick={() => {
                 setCurrent((c) => c + 1);
                 setShowAnswer(false);
+                setSpSelected(null);
               }}
             >
-              Next
+              Next {nextQuestionTimer !== null ? `(${nextQuestionTimer}s)` : ""}
             </button>
           )}
           {showAnswer && current === questions.length - 1 && (
@@ -612,6 +685,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       // If all players have answered, show answer
       if (all.length === players.length) {
         setMpShowAnswer(true);
+        setNextQuestionTimer(10); // Start 10s countdown
       }
     });
     return () => unsub();
@@ -778,9 +852,13 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           {mpShowAnswer && !isLastQuestion && (
             <button
               className="px-4 py-2 bg-emerald-600 text-white rounded"
-              onClick={() => setCurrent((c) => c + 1)}
+              onClick={() => {
+                setCurrent((c) => c + 1);
+                setNextQuestionTimer(null); // Clear timer on manual click
+                if (nextTimerRef.current) clearInterval(nextTimerRef.current);
+              }}
             >
-              Next
+              Next {nextQuestionTimer !== null ? `(${nextQuestionTimer}s)` : ""}
             </button>
           )}
           {mpShowAnswer && isLastQuestion && (
@@ -795,7 +873,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       </div>
     );
   }
-    return null;
+  return null;
 }
 
 export default PlayQuiz;
