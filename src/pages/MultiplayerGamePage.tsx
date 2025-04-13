@@ -65,10 +65,14 @@ export default function MultiplayerGamePage() {
       }
       setQuestions(questionsArr);
       setMpTimer(questionsArr[0]?.time || 30);
-      // Organizer initializes currentQuestion in Firestore
+      // Organizer initializes currentQuestion and questionStartTimes in Firestore
       if (questionsArr.length > 0 && sessionId && isOrganizer) {
         const sessionRef = doc(db, "sessions", sessionId);
-        setDoc(sessionRef, { currentQuestion: 0 }, { merge: true });
+        setDoc(sessionRef, {
+          currentQuestion: 0,
+          questionStartTimes: { 0: serverTimestamp() },
+          questionStart: serverTimestamp() // For backward compatibility
+        }, { merge: true });
       }
     }
     fetchQuiz();
@@ -274,7 +278,8 @@ export default function MultiplayerGamePage() {
           const sessionRef = doc(db, "sessions", sessionId);
           await setDoc(sessionRef, {
             currentQuestion: current + 1,
-            [`questionStarts.${current + 1}`]: serverTimestamp()
+            [`questionStartTimes.${current + 1}`]: serverTimestamp(),
+            questionStart: serverTimestamp() // For backward compatibility
           }, { merge: true });
         } else {
           // Last question - finish the game
@@ -301,8 +306,13 @@ export default function MultiplayerGamePage() {
             // For each question, get questionStart
             const sessionData = sessionSnap.data();
             const questionsStart: { [qIdx: number]: number } = {};
+            // Check both field names for backward compatibility
             if (sessionData.questionStartTimes) {
               Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]: [string, any]) => {
+                if (ts?.toMillis) questionsStart[Number(qIdx)] = ts.toMillis();
+              });
+            } else if (sessionData.questionStarts) {
+              Object.entries(sessionData.questionStarts).forEach(([qIdx, ts]: [string, any]) => {
                 if (ts?.toMillis) questionsStart[Number(qIdx)] = ts.toMillis();
               });
             }
@@ -332,9 +342,19 @@ export default function MultiplayerGamePage() {
                   let points = 1000;
                   
                   // Add speed bonus if timing data is available
-                  if (typeof a.answeredAt?.toMillis === "function" && questionsStart[qIdx]) {
+                  // First try to use the question start time from the answer object
+                  let questionStartTime = null;
+                  if (a.questionStart && typeof a.questionStart.toMillis === "function") {
+                    questionStartTime = a.questionStart.toMillis();
+                  }
+                  // Fallback to the question start time from the session document
+                  else if (questionsStart[qIdx]) {
+                    questionStartTime = questionsStart[qIdx];
+                  }
+                  
+                  if (typeof a.answeredAt?.toMillis === "function" && questionStartTime) {
                     const answeredAt = a.answeredAt.toMillis();
-                    const timeTaken = Math.max(0, (answeredAt - questionsStart[qIdx]) / 1000);
+                    const timeTaken = Math.max(0, (answeredAt - questionStartTime) / 1000);
                     const maxTime = q.time || 30;
                     
                     // Enhanced speed bonus calculation - more weight on speed
@@ -429,13 +449,31 @@ export default function MultiplayerGamePage() {
           const q = questions[current];
           const isCorrect = q && idx === q.correctAnswer;
           
+          // Get the question start time from the session document
+          const sessionRef = doc(db, "sessions", sessionId);
+          const sessionSnap = await getDoc(sessionRef);
+          let questionStart = null;
+          
+          if (sessionSnap.exists()) {
+            const sessionData = sessionSnap.data();
+            // Try both field names for backward compatibility
+            if (sessionData.questionStartTimes && sessionData.questionStartTimes[current]) {
+              questionStart = sessionData.questionStartTimes[current];
+            } else if (sessionData.questionStarts && sessionData.questionStarts[current]) {
+              questionStart = sessionData.questionStarts[current];
+            } else if (sessionData.questionStart) {
+              questionStart = sessionData.questionStart;
+            }
+          }
+          
           // Write answer to Firestore
           const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
           await setDoc(answerRef, {
             qIdx: current,
             answer: idx,
             answeredAt: serverTimestamp(),
-            isCorrect: isCorrect
+            isCorrect: isCorrect,
+            questionStart: questionStart // Include the question start time
           });
           
           console.log("Answer written to Firestore", {
@@ -444,14 +482,14 @@ export default function MultiplayerGamePage() {
             idx,
             current,
             isCorrect,
-            correctAnswer: q?.correctAnswer
+            correctAnswer: q?.correctAnswer,
+            questionStart: questionStart
           });
           
           // Update running score in session document
           if (isCorrect) {
             // We'll calculate the actual score when all questions are answered
             // This is just to keep track of correct answers
-            const sessionRef = doc(db, "sessions", sessionId);
             await updateDoc(sessionRef, {
               [`playerCorrectAnswers.${nickname}.${current}`]: true
             });

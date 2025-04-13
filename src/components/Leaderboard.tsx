@@ -31,13 +31,13 @@ export default function Leaderboard({
               
               return (
                 <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {totalScore} pts 
+                  {nick}: {totalScore} pts
                   {totalScore > 0 && (
                     <span className="text-sm text-gray-600 ml-1">
                       ({Math.floor(totalScore / 1000)} correct × 1000 + {speedBonus} speed bonus)
                     </span>
                   )}
-                  {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                  {i === 0 && totalScore > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
                   {nick === nickname && " (You)"}
                 </li>
               );
