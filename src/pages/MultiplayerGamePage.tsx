@@ -96,11 +96,69 @@ export default function MultiplayerGamePage() {
     };
   }, [current, questions]);
 
-  // Listen for answers (stub, should be implemented for real-time multiplayer)
-  // useEffect(() => { ... });
+ // Next question countdown logic
+ useEffect(() => {
+   if (!mpShowAnswer || nextQuestionTimer === null) return;
+   if (nextQuestionTimer <= 0) {
+     // Move to next question or finish
+     if (current < questions.length - 1) {
+       setCurrent(current + 1);
+       setMpAnswered(false);
+       setMpSelected(null);
+       setMpShowAnswer(false);
+       setNextQuestionTimer(null);
+     } else {
+       // Quiz finished, navigate to results or show final leaderboard
+       navigate(`/play/quiz/${id}/results`);
+     }
+     return;
+   }
+   const timer = setTimeout(() => {
+     setNextQuestionTimer((t) => (t !== null ? t - 1 : null));
+   }, 1000);
+   return () => clearTimeout(timer);
+ }, [nextQuestionTimer, mpShowAnswer]);
 
-  // Calculate scores and leaderboard (stub, should be implemented for real-time multiplayer)
-  // useEffect(() => { ... });
+  // Listen for answers for the current question
+  useEffect(() => {
+    if (!sessionId || !questions.length || current >= questions.length) return;
+    const answersRef = collection(db, "sessions", sessionId, "answers");
+    const unsub = onSnapshot(answersRef, (snap) => {
+      const allAnswers = snap.docs
+        .map((doc) => ({ nickname: doc.id, ...(doc.data() as any) }))
+        .filter((a) => typeof a.qIdx === "number" && a.qIdx === current);
+      setMpAllAnswers(allAnswers);
+      // If all players have answered, show answer and start next question timer
+      if (
+        allAnswers.length === players.length &&
+        players.length > 0 &&
+        !mpShowAnswer
+      ) {
+        setMpShowAnswer(true);
+        setNextQuestionTimer(10);
+      }
+    });
+    return () => unsub();
+  }, [sessionId, current, questions, players.length]);
+
+  // Calculate scores and leaderboard when answers are shown
+  useEffect(() => {
+    if (!mpShowAnswer || !questions.length) return;
+    // Calculate scores for this question
+    const q = questions[current];
+    const newScores = { ...mpScores };
+    mpAllAnswers.forEach((a) => {
+      if (a.answer === q.correctAnswer) {
+        newScores[a.nickname] = (newScores[a.nickname] || 0) + 1;
+      }
+    });
+    setMpScores(newScores);
+    // Update leaderboard
+    const sorted = Object.entries(newScores)
+      .sort((a, b) => b[1] - a[1])
+      .map(([nick]) => nick);
+    setMpLeaderboard(sorted);
+  }, [mpShowAnswer]);
 
   if (!quiz) {
     return (
@@ -136,7 +194,18 @@ export default function MultiplayerGamePage() {
       players={players}
       nickname={nickname}
       sessionId={sessionId}
-      submitMpAnswer={() => {}} // TODO: Implement answer submission
+      submitMpAnswer={async (idx: number) => {
+        if (!sessionId || !nickname) return;
+        setMpSelected(idx);
+        setMpAnswered(true);
+        // Write answer to Firestore
+        const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
+        await setDoc(answerRef, {
+          qIdx: current,
+          answer: idx,
+          answeredAt: serverTimestamp(),
+        });
+      }}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
       onFinish={() => navigate(`/play/quiz/${id}/results`)}
     />
