@@ -192,6 +192,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         language: language.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         image: image.trim(),
+        questionCount: questions.length, // Add question count
         questionsCount: questions.length,
       });
   

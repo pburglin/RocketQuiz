@@ -70,16 +70,16 @@ export default function SearchQuiz() {
     const matchesPopularity = quizPopularity >= popularity;
 
     let matchesGameLength = true;
-    if (gameLength && typeof quiz.questionsCount === "number") {
+    if (gameLength && typeof quiz.questionCount === "number") {
       if (gameLength === "quick") {
-        matchesGameLength = quiz.questionsCount < 10;
+        matchesGameLength = quiz.questionCount < 10;
       } else if (gameLength === "medium") {
-        matchesGameLength = quiz.questionsCount >= 10 && quiz.questionsCount <= 20;
+        matchesGameLength = quiz.questionCount >= 10 && quiz.questionCount <= 20;
       } else if (gameLength === "long") {
-        matchesGameLength = quiz.questionsCount > 20;
+        matchesGameLength = quiz.questionCount > 20;
       }
     } else if (gameLength) {
-      // If filter is set but questionsCount is missing, exclude quiz
+      // If filter is set but questionCount is missing, exclude quiz
       matchesGameLength = false;
     }
 
@@ -228,7 +228,15 @@ export default function SearchQuiz() {
             </div>
           ) : (
             filteredQuizzes.map((quiz) => (
-              <QuizCard key={quiz.id} quiz={quiz} />
+              <div key={quiz.id}>
+                <QuizCard quiz={quiz} />
+                <div className="text-xs text-gray-400 ml-2">
+                  {/* Debug: show questionCount */}
+                  {typeof quiz.questionCount === "number"
+                    ? `Questions: ${quiz.questionCount}`
+                    : "No questionCount"}
+                </div>
+              </div>
             ))
           )}
         </div>

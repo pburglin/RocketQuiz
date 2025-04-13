@@ -181,39 +181,40 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   }, [current, questions]);
 
   // Create multiplayer session when entering lobby
+  // Create multiplayer session / Set session URL
   useEffect(() => {
-    // Only create a new session if there is no session param in the URL
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("session");
-    if (gameState === "multi-lobby" && !sessionId && quiz && !sid) {
-      // Organizer creates session
+
+    // Organizer enters lobby: Create session if needed
+    // Check isOrganizer flag which should be set by the button click
+    if (gameState === "multi-lobby" && !sid && !sessionId && quiz && isOrganizer) {
       const newSessionId = uuidv4();
       const sessionRef = doc(collection(db, "sessions"), newSessionId);
       setLobbyLoading(true);
+      // Create the session document
       setDoc(sessionRef, {
         quizId: quiz.id,
         createdAt: serverTimestamp(),
         started: false,
-      }).then(async () => {
+      }).then(() => {
+        // Update state after session is created
         setSessionId(newSessionId);
-        setIsOrganizer(true);
         const url = `${window.location.origin}/play/quiz/${quiz.id}?session=${newSessionId}`;
         setSessionUrl(url);
-        // Automatically add organizer as a player with their nickname
-        if (nickname && nickname.trim().length >= 2) {
-          const playerRef = doc(db, "sessions", newSessionId, "players", nickname);
-          await setDoc(playerRef, {
-            joinedAt: serverTimestamp(),
-          });
-        }
         setLobbyLoading(false);
+        // Organizer still needs to enter nickname and click Join
       });
     }
-    // If joining as a player, set the sessionUrl when quiz is loaded
-    if (gameState === "multi-lobby" && sessionId && quiz && sid) {
+
+    // Player joins via URL: Set session URL when quiz is loaded
+    // Check !isOrganizer flag which should be false if joined via URL
+    if (gameState === "multi-lobby" && sid && quiz && !isOrganizer) {
+      // sessionId is already set by the mount effect
       setSessionUrl(`${window.location.origin}/play/quiz/${quiz.id}?session=${sid}`);
     }
-  }, [gameState, sessionId, quiz, nickname]);
+    // Removed nickname from dependency array, added isOrganizer
+  }, [gameState, sessionId, quiz, isOrganizer]);
 
   // Listen for players joining the session
   useEffect(() => {
@@ -232,21 +233,24 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       if (nextTimerRef.current) clearInterval(nextTimerRef.current);
       return;
     }
+    let cancelled = false;
     nextTimerRef.current = setInterval(() => {
       setNextQuestionTimer((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(nextTimerRef.current as NodeJS.Timeout);
           // Automatically go to next question
-          if (current < questions.length - 1) {
-            setCurrent((c) => c + 1);
-            setShowAnswer(false);
-            setSpSelected(null); // Reset single player selection
-            setMpShowAnswer(false); // Reset multiplayer state
-            setMpAnswered(false);
-            setMpSelected(null);
-            setMpAllAnswers([]);
-          } else {
-            setGameState("results"); // Show final results
+          if (!cancelled) {
+            if (current < questions.length - 1) {
+              setCurrent((c) => c + 1);
+              setShowAnswer(false);
+              setSpSelected(null); // Reset single player selection
+              setMpShowAnswer(false); // Reset multiplayer state
+              setMpAnswered(false);
+              setMpSelected(null);
+              setMpAllAnswers([]);
+            } else {
+              setGameState("results"); // Show final results
+            }
           }
           return null;
         }
@@ -254,6 +258,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       });
     }, 1000);
     return () => {
+      cancelled = true;
       if (nextTimerRef.current) clearInterval(nextTimerRef.current);
     };
   }, [nextQuestionTimer, current, questions.length]);
@@ -314,10 +319,11 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     );
   }
 
-  const q = questions[current];
+  // Do not define q here; define it inside each render block as needed
 
   // PRE-GAME: Show quiz details, collapsed questions, and start buttons
   if (gameState === "pre") {
+    const q = questions.length > 0 ? questions[current] : null;
     return (
       <div className="max-w-2xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
@@ -382,7 +388,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           </button>
           <button
             className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
-            onClick={() => setGameState("multi-lobby")}
+            onClick={() => {
+              setIsOrganizer(true); // Set organizer flag
+              setGameState("multi-lobby");
+            }}
           >
             Start Multiplayer
           </button>
@@ -401,20 +410,29 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // SINGLE PLAYER: Show original question/answer UI
   if (gameState === "single") {
+    const q = questions.length > 0 ? questions[current] : null;
     // Single player: handle answer click
     const handleSinglePlayerAnswer = (idx: number) => {
-      if (showAnswer) return;
+      if (showAnswer || !q) return;
       setSpSelected(idx);
       setShowAnswer(true);
       if (timerRef.current) clearInterval(timerRef.current);
       setNextQuestionTimer(10); // Start 10s countdown
       // Scoring
-      if (idx === q.correctAnswer) {
+      if (q && idx === q.correctAnswer) {
         const base = 100;
         const bonus = Math.floor((timer / q.time) * 100);
         setSpScore((prev) => prev + base + bonus);
       }
     };
+
+    if (!q) {
+      return (
+        <div className="max-w-2xl mx-auto p-8 text-center">
+          <div className="text-lg text-gray-700">No question data available.</div>
+        </div>
+      );
+    }
 
     return (
       <div className="max-w-2xl mx-auto p-4">
@@ -743,8 +761,17 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // MULTIPLAYER GAME: Show multiplayer question/answer UI and leaderboard
   if (gameState === "multi-playing") {
+    const q = questions.length > 0 ? questions[current] : null;
     // End of quiz
     const isLastQuestion = current === questions.length - 1;
+
+    if (!q) {
+      return (
+        <div className="max-w-2xl mx-auto p-8 text-center">
+          <div className="text-lg text-gray-700">No question data available.</div>
+        </div>
+      );
+    }
 
     return (
       <div className="max-w-2xl mx-auto p-4">
@@ -767,17 +794,17 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         <div className="mt-6 mb-2 text-lg font-semibold">
           Question {current + 1} of {questions.length}
         </div>
-        <div className="mb-2 font-bold">{questions[current].question}</div>
-        {questions[current].image && questions[current].image.trim() !== "" ? (
+        <div className="mb-2 font-bold">{q.question}</div>
+        {q.image && q.image.trim() !== "" ? (
           <img
-            src={questions[current].image}
+            src={q.image}
             alt={`Question ${current + 1}`}
             className="w-full h-40 object-cover rounded mb-4"
           />
         ) : (
           <ColorCardPlaceholder
-            id={questions[current].id}
-            text={questions[current].question ? questions[current].question.charAt(0).toUpperCase() : "?"}
+            id={q.id}
+            text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
             className="w-full h-40 rounded mb-4"
           />
         )}
@@ -787,13 +814,13 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           </span>
         </div>
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {questions[current].answers.map((answer, idx) => (
+          {q.answers.map((answer, idx) => (
             <button
               key={idx}
               className={`w-full px-4 py-2 rounded border text-left transition
                 ${
                   mpShowAnswer
-                    ? idx === questions[current].correctAnswer
+                    ? idx === q.correctAnswer
                       ? "bg-green-200 border-green-400 font-bold"
                       : "bg-red-100 border-gray-200"
                     : mpSelected === idx
@@ -805,7 +832,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
               onClick={() => submitMpAnswer(idx)}
             >
               {answer}
-              {mpShowAnswer && idx === questions[current].correctAnswer && (
+              {mpShowAnswer && idx === q.correctAnswer && (
                 <span className="ml-2 text-green-700 font-bold">(Correct)</span>
               )}
             </button>
