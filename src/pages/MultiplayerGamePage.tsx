@@ -226,16 +226,25 @@ export default function MultiplayerGamePage() {
       nickname={nickname}
       sessionId={sessionId}
       submitMpAnswer={async (idx: number) => {
-        if (!sessionId || !nickname) return;
+        console.log("submitMpAnswer called", { idx, sessionId, nickname, current });
+        if (!sessionId || !nickname) {
+          console.error("Missing sessionId or nickname", { sessionId, nickname });
+          return;
+        }
         setMpSelected(idx);
         setMpAnswered(true);
-        // Write answer to Firestore
-        const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
-        await setDoc(answerRef, {
-          qIdx: current,
-          answer: idx,
-          answeredAt: serverTimestamp(),
-        });
+        try {
+          // Write answer to Firestore
+          const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
+          await setDoc(answerRef, {
+            qIdx: current,
+            answer: idx,
+            answeredAt: serverTimestamp(),
+          });
+          console.log("Answer written to Firestore", { sessionId, nickname, idx, current });
+        } catch (err) {
+          console.error("Error writing answer to Firestore", err);
+        }
       }}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
       onFinish={() => navigate(`/play/quiz/${id}/results`)}
