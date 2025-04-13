@@ -12,6 +12,8 @@ export default function SinglePlayerSession({
   setShowAnswer,
   spScore,
   setSpScore,
+  spCurrentSpeedBonus,
+  setSpCurrentSpeedBonus,
   spSelected,
   setSpSelected,
   nextQuestionTimer,
@@ -30,6 +32,8 @@ export default function SinglePlayerSession({
   setShowAnswer: React.Dispatch<React.SetStateAction<boolean>>;
   spScore: number;
   setSpScore: React.Dispatch<React.SetStateAction<number>>;
+  spCurrentSpeedBonus: number;
+  setSpCurrentSpeedBonus: React.Dispatch<React.SetStateAction<number>>;
   spSelected: number | null;
   setSpSelected: React.Dispatch<React.SetStateAction<number | null>>;
   nextQuestionTimer: number | null;
@@ -58,7 +62,10 @@ export default function SinglePlayerSession({
       const speedFactor = Math.max(0, 1 - (timeElapsed / maxTime));
       // Exponential scoring to reward faster answers more significantly
       const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
+      setSpCurrentSpeedBonus(speedBonus); // Store the current speed bonus
       setSpScore((prev) => prev + base + speedBonus);
+    } else {
+      setSpCurrentSpeedBonus(0); // No speed bonus for incorrect answers
     }
   };
 
@@ -154,7 +161,7 @@ export default function SinglePlayerSession({
         <div className="text-2xl">Score: {spScore}</div>
         {showAnswer && spSelected === q.correctAnswer && (
           <div className="text-sm text-gray-600">
-            (Last answer: 1000 base + {Math.round(spScore % 1000)} speed bonus)
+            (Last answer: 1000 base + {spCurrentSpeedBonus} speed bonus)
           </div>
         )}
       </div>

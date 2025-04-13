@@ -52,6 +52,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // Single player scoring
   const [spScore, setSpScore] = useState(0);
+  const [spCurrentSpeedBonus, setSpCurrentSpeedBonus] = useState(0);
   const [spSelected, setSpSelected] = useState<number | null>(null);
 
   // Countdown for next question
@@ -384,6 +385,8 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         setShowAnswer={setShowAnswer}
         spScore={spScore}
         setSpScore={setSpScore}
+        spCurrentSpeedBonus={spCurrentSpeedBonus}
+        setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
         spSelected={spSelected}
         setSpSelected={setSpSelected}
         nextQuestionTimer={nextQuestionTimer}

@@ -14,6 +14,7 @@ export default function SinglePlayerPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [spScore, setSpScore] = useState(0);
+  const [spCurrentSpeedBonus, setSpCurrentSpeedBonus] = useState(0);
   const [spSelected, setSpSelected] = useState<number | null>(null);
   const [nextQuestionTimer, setNextQuestionTimer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +131,8 @@ export default function SinglePlayerPage() {
       setShowAnswer={setShowAnswer}
       spScore={spScore}
       setSpScore={setSpScore}
+      spCurrentSpeedBonus={spCurrentSpeedBonus}
+      setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
       spSelected={spSelected}
       setSpSelected={setSpSelected}
       nextQuestionTimer={nextQuestionTimer}

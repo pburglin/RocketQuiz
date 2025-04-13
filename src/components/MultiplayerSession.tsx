@@ -183,9 +183,9 @@ export default function MultiplayerSession({
               .map((item: { nick: string; points: number; speedBonus: number }, i: number) => (
                 <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
                   {item.nick}: {item.points} pts
-                  {item.points > 1000 && (
+                  {item.points > 0 && (
                     <span className="text-sm text-gray-600 ml-1">
-                      (1000 + {item.points - 1000} speed bonus)
+                      (1000 + {item.speedBonus} speed bonus)
                     </span>
                   )}
                   {i === 0 && item.points > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
