@@ -30,8 +30,9 @@ function App() {
           <Route path="/create-quiz" element={<CreateQuiz user={user} />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-            <Route path="/quiz/:id" element={<PlayQuiz user={user} />} />
-          </Routes>
+          <Route path="/quiz/:id" element={<PlayQuiz user={user} />} />
+          <Route path="/play/quiz/:id" element={<PlayQuiz user={user} />} />
+        </Routes>
       </div>
     </Router>
   );
