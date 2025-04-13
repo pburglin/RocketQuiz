@@ -132,6 +132,18 @@ export default function MultiplayerGamePage() {
   }, [sessionId]);
 
   // Listen for players
+  // Listen for gameFinished and navigate to results for all clients
+  useEffect(() => {
+    if (!sessionId) return;
+    const sessionRef = doc(db, "sessions", sessionId);
+    const unsub = onSnapshot(sessionRef, (snap) => {
+      if (snap.exists() && snap.data().gameFinished) {
+        navigate(`/play/quiz/${id}/results?session=${sessionId}`);
+      }
+    });
+    return () => unsub();
+  }, [sessionId, id, navigate]);
+
   useEffect(() => {
     if (!sessionId) return;
     const unsub = onSnapshot(collection(db, "sessions", sessionId, "players"), (snap) => {
@@ -165,6 +177,18 @@ export default function MultiplayerGamePage() {
     };
   }, [current, questions]);
 
+ // Listen for gameFinished in session doc and navigate to results
+ useEffect(() => {
+   if (!sessionId) return;
+   const sessionRef = doc(db, "sessions", sessionId);
+   const unsub = onSnapshot(sessionRef, (snap) => {
+     if (snap.exists() && snap.data().gameFinished) {
+       navigate(`/play/quiz/${id}/results?session=${sessionId}`);
+     }
+   });
+   return () => unsub();
+ }, [sessionId, id, navigate]);
+
  // Next question countdown logic (organizer controls progression)
  useEffect(() => {
    if (!mpShowAnswer || nextQuestionTimer === null) return;
@@ -173,7 +197,7 @@ export default function MultiplayerGamePage() {
      if (isOrganizer && sessionId) {
        if (current < questions.length - 1) {
          const sessionRef = doc(db, "sessions", sessionId);
-         setDoc(sessionRef, { currentQuestion: current + 1, questionStart: serverTimestamp() }, { merge: true });
+         setDoc(sessionRef, { currentQuestion: current + 1, [`questionStarts.${current + 1}`]: serverTimestamp() }, { merge: true });
        } else {
          // Quiz finished, navigate to results or show final leaderboard
          navigate(`/play/quiz/${id}/results`);
@@ -257,6 +281,51 @@ export default function MultiplayerGamePage() {
 
   return (
     <MultiplayerSession
+      onFinish={async () => {
+        if (!isOrganizer || !sessionId) return;
+        // Fetch all answers for the session
+        const answersSnap = await getDocs(collection(db, "sessions", sessionId, "answers"));
+        const allAnswers = answersSnap.docs.map((doc) => ({ nickname: doc.id, ...(doc.data() as any) }));
+        // Fetch session for questionStart times
+        const sessionRef = doc(db, "sessions", sessionId);
+        const sessionSnap = await getDoc(sessionRef);
+        let scores: { [nickname: string]: number } = {};
+        let leaderboard: string[] = [];
+        if (sessionSnap.exists()) {
+          // For each question, get questionStart
+          const sessionData = sessionSnap.data();
+          const questionsStart: { [qIdx: number]: number } = {};
+          if (sessionData.questionStartTimes) {
+            Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]: [string, any]) => {
+              if (ts?.toMillis) questionsStart[Number(qIdx)] = ts.toMillis();
+            });
+          }
+          // Calculate scores
+          allAnswers.forEach((a) => {
+            if (typeof a.qIdx === "number" && typeof a.answer === "number" && typeof a.answeredAt?.toMillis === "function") {
+              const qIdx = a.qIdx;
+              const q = questions[qIdx];
+              if (q && a.answer === q.correctAnswer && questionsStart[qIdx]) {
+                const answeredAt = a.answeredAt.toMillis();
+                const timeTaken = Math.max(0, (answeredAt - questionsStart[qIdx]) / 1000);
+                const maxTime = q.time || 30;
+                const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+                const points = 1000 + speedBonus;
+                scores[a.nickname] = (scores[a.nickname] || 0) + points;
+              }
+            }
+          });
+          leaderboard = Object.entries(scores)
+            .sort((a, b) => b[1] - a[1])
+            .map(([nick]) => nick);
+          // Write to session doc
+          await setDoc(sessionRef, {
+            mpScores: scores,
+            mpLeaderboard: leaderboard,
+            gameFinished: true,
+          }, { merge: true });
+        }
+      }}
       quiz={quiz}
       questions={questions}
       current={current}
@@ -303,7 +372,6 @@ export default function MultiplayerGamePage() {
         }
       }}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
-      onFinish={() => navigate(`/play/quiz/${id}/results`)}
     />
   );
 }

@@ -5,6 +5,16 @@ import { db } from "../firebaseClient";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function ResultsPage() {
+  // Multiplayer: fetch leaderboard and scores from Firestore session doc
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session")) setSessionId(params.get("session"));
+    else if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_sessionId");
+      if (stored) setSessionId(stored);
+    }
+  }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,32 +27,20 @@ export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
-      // Try to get sessionId from URL or localStorage
-      let sessionId = null;
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("session")) sessionId = params.get("session");
-      if (!sessionId && typeof window !== "undefined") {
-        sessionId = localStorage.getItem("mp_sessionId");
-      }
       if (!sessionId) return;
-      // Fetch all answers
-      const answersSnap = await getDoc(doc(db, "sessions", sessionId));
-      let leaderboard: string[] = [];
-      let scores: { [nickname: string]: number } = {};
-      if (answersSnap.exists()) {
-        scores = answersSnap.data().mpScores || {};
-        leaderboard = Object.entries(scores)
-          .sort((a, b) => b[1] - a[1])
-          .map(([nick]) => nick);
-        setMpScores(scores);
-        setMpLeaderboard(leaderboard);
-        setIsMultiplayer(true);
+      const sessionRef = doc(db, "sessions", sessionId);
+      const sessionSnap = await getDoc(sessionRef);
+      if (sessionSnap.exists()) {
+        const data = sessionSnap.data();
+        if (data.mpScores && data.mpLeaderboard) {
+          setMpScores(data.mpScores);
+          setMpLeaderboard(data.mpLeaderboard);
+          setIsMultiplayer(true);
+        }
       }
     }
-    if (!location.state || !location.state.mpLeaderboard) {
-      fetchMultiplayerResults();
-    }
-  }, [location.state]);
+    fetchMultiplayerResults();
+  }, [sessionId]);
 
   useEffect(() => {
     async function fetchQuiz() {
