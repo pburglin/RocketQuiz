@@ -193,29 +193,35 @@ export default function MultiplayerSession({
         {mpShowAnswer && !isLastQuestion && (
           <button
             className={`px-4 py-2 rounded font-bold transition-colors ${
-              isOrganizer && (nextQuestionTimer === 0 || nextQuestionTimer <= 0)
+              isOrganizer && mpShowAnswer
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
-            disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
-            onClick={isOrganizer ? onFinish : undefined}
+            disabled={!isOrganizer || !mpShowAnswer}
+            onClick={isOrganizer && mpShowAnswer ? onFinish : undefined}
           >
-            {isOrganizer && nextQuestionTimer === 0 ? "Next Question" :
-             `Next${nextQuestionTimer !== null && nextQuestionTimer > 0 ? ` (${nextQuestionTimer})` : ""}`}
-            Next{nextQuestionTimer !== null ? ` (${nextQuestionTimer})` : ""}
+            {isOrganizer && mpShowAnswer
+              ? nextQuestionTimer && nextQuestionTimer > 0
+                ? `Next (${nextQuestionTimer})`
+                : "Next Question"
+              : "Next"}
           </button>
         )}
         {mpShowAnswer && isLastQuestion && (
           <button
             className={`px-4 py-2 rounded font-bold transition-colors ${
-              isOrganizer
+              isOrganizer && mpShowAnswer
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
-            disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
-            onClick={isOrganizer ? onFinish : undefined}
+            disabled={!isOrganizer || !mpShowAnswer}
+            onClick={isOrganizer && mpShowAnswer ? onFinish : undefined}
           >
-            {isOrganizer && nextQuestionTimer === 0 ? "Finish Quiz" : "Finish"}
+            {isOrganizer && mpShowAnswer
+              ? nextQuestionTimer && nextQuestionTimer > 0
+                ? `Finish (${nextQuestionTimer})`
+                : "Finish Quiz"
+              : "Finish"}
           </button>
         )}
       </div>

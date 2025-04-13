@@ -198,6 +198,11 @@ export default function MultiplayerGamePage() {
         players.length > 0 &&
         !mpShowAnswer
       ) {
+        console.log("All players have answered. Showing answers and enabling Next button.");
+        // Stop the timer
+        if (timerRef.current) {
+          clearInterval(timerRef.current as NodeJS.Timeout);
+        }
         setMpShowAnswer(true);
         setNextQuestionTimer(10);
       }
