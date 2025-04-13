@@ -665,12 +665,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // Listen for answers for this question (multiplayer)
   useEffect(() => {
-    if (
-      gameState !== "multi-playing" ||
-      !sessionId ||
-      !questions[current]
-    )
-      return;
+    if (gameState !== "multi-playing" || !sessionId || !questions[current]) return;
     const answersRef = collection(
       db,
       "sessions",
@@ -695,8 +690,8 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   // Timer for multiplayer
   useEffect(() => {
     if (gameState !== "multi-playing") return;
-    if (mpShowAnswer) return;
-    setMpTimer(questions[current]?.time || 0);
+    if (mpShowAnswer || !questions[current]) return;
+    setMpTimer(questions[current].time);
     const interval = setInterval(() => {
       setMpTimer((prev) => {
         if (prev <= 1) {
@@ -714,16 +709,16 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   // Calculate scores after each question
   useEffect(() => {
     if (gameState !== "multi-playing") return;
-    if (!mpShowAnswer) return;
+    if (!mpShowAnswer || !questions[current]) return;
     // Calculate scores
-    const correctIdx = questions[current]?.correctAnswer;
+    const correctIdx = questions[current].correctAnswer;
     let newScores = { ...mpScores };
     mpAllAnswers.forEach((ans) => {
       if (ans.answer === correctIdx) {
         // Base points + speed bonus
         const base = 100;
-        const speed = Math.max(0, questions[current]?.time - ans.time);
-        const bonus = Math.floor((speed / (questions[current]?.time || 1)) * 100);
+        const speed = Math.max(0, questions[current].time - ans.time);
+        const bonus = Math.floor((speed / questions[current].time) * 100);
         newScores[ans.nickname] = (newScores[ans.nickname] || 0) + base + bonus;
       }
     });
