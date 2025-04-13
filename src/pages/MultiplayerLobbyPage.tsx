@@ -64,6 +64,13 @@ export default function MultiplayerLobbyPage() {
     return () => unsub();
   }, [sessionId]);
 
+  // Add player to session's players subcollection when nickname is set
+  useEffect(() => {
+    if (!sessionId || !nickname || nickname.trim() === "") return;
+    const playerRef = doc(db, "sessions", sessionId, "players", nickname);
+    setDoc(playerRef, { joinedAt: serverTimestamp() }, { merge: true });
+  }, [sessionId, nickname]);
+
   // Start game: set started flag and redirect
   const handleStartGame = async () => {
     if (!sessionId) return;
