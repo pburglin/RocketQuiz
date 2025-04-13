@@ -64,6 +64,18 @@ export default function MultiplayerLobbyPage() {
     return () => unsub();
   }, [sessionId]);
 
+  // Listen for game start and navigate all players when started
+  useEffect(() => {
+    if (!sessionId || !id) return;
+    const sessionRef = doc(db, "sessions", sessionId);
+    const unsub = onSnapshot(sessionRef, (snap) => {
+      if (snap.exists() && snap.data().started) {
+        navigate(`/play/quiz/${id}/multiplayer/game?session=${sessionId}`);
+      }
+    });
+    return () => unsub();
+  }, [sessionId, id, navigate]);
+
 
   // Start game: set started flag and redirect
   const handleStartGame = async () => {
