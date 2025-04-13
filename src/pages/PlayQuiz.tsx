@@ -163,11 +163,18 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         quizId: quiz.id,
         createdAt: serverTimestamp(),
         started: false,
-      }).then(() => {
+      }).then(async () => {
         setSessionId(newSessionId);
         setIsOrganizer(true);
         const url = `${window.location.origin}/play/quiz/${quiz.id}?session=${newSessionId}`;
         setSessionUrl(url);
+        // Automatically add organizer as a player with their nickname
+        if (nickname && nickname.trim().length >= 2) {
+          const playerRef = doc(db, "sessions", newSessionId, "players", nickname);
+          await setDoc(playerRef, {
+            joinedAt: serverTimestamp(),
+          });
+        }
         setLobbyLoading(false);
       });
     }
@@ -175,7 +182,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     if (gameState === "multi-lobby" && sessionId && quiz && sid) {
       setSessionUrl(`${window.location.origin}/play/quiz/${quiz.id}?session=${sid}`);
     }
-  }, [gameState, sessionId, quiz]);
+  }, [gameState, sessionId, quiz, nickname]);
 
   // Listen for players joining the session
   useEffect(() => {
