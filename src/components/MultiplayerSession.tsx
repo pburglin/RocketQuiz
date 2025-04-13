@@ -97,11 +97,11 @@ export default function MultiplayerSession({
                   : "bg-white border-gray-200 hover:bg-emerald-50"
               }
             `}
-            disabled={mpShowAnswer || mpAnswered}
+            disabled={mpShowAnswer || mpAnswered || (isOrganizer && !players.includes(nickname))}
             onClick={() => submitMpAnswer(idx)}
             style={{
-              opacity: mpAnswered && mpSelected !== idx ? 0.5 : 1,
-              pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== idx) ? "none" : "auto",
+              opacity: (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? 0.5 : 1,
+              pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? "none" : "auto",
               borderWidth: mpSelected === idx ? 3 : undefined,
               borderColor: mpSelected === idx ? "#059669" : undefined, // emerald-600
             }}
@@ -115,7 +115,9 @@ export default function MultiplayerSession({
       </div>
       {!mpShowAnswer && (
         <div className="mb-4 text-center text-gray-600">
-          Waiting for all players to answer or time to run out...
+          {isOrganizer && !players.includes(nickname)
+            ? "Waiting for players to answer or time to run out..."
+            : "Waiting for all players to answer or time to run out..."}
           <div className="mt-2 flex flex-col items-center">
             <div className="font-semibold text-sm mb-1">Answered:</div>
             <ul className="text-xs">
@@ -140,6 +142,11 @@ export default function MultiplayerSession({
               ? "Click Next to continue."
               : "Waiting on the game organizer to continue."
           }
+        </div>
+      )}
+      {isOrganizer && !players.includes(nickname) && (
+        <div className="mb-4 text-center text-blue-700 font-semibold">
+          You are managing this game as the organizer (not playing).
         </div>
       )}
       {/* Leaderboard */}

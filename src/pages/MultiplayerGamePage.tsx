@@ -193,9 +193,14 @@ export default function MultiplayerGamePage() {
         .filter((a) => typeof a.qIdx === "number" && a.qIdx === current);
       setMpAllAnswers(allAnswers);
       // If all players have answered, show answer and start next question timer
+      // Note: We only count actual players, not the organizer if they're not playing
+      const activePlayers = isOrganizer && !players.includes(nickname)
+        ? players
+        : players;
+        
       if (
-        allAnswers.length === players.length &&
-        players.length > 0 &&
+        allAnswers.length === activePlayers.length &&
+        activePlayers.length > 0 &&
         !mpShowAnswer
       ) {
         console.log("All players have answered. Showing answers and enabling Next button.");

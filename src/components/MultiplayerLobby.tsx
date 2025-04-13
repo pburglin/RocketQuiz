@@ -85,7 +85,16 @@ export default function MultiplayerLobby({
             <div className="text-xs text-gray-500 mt-2">Scan to join</div>
           </div>
           <div className="mb-4">
-            <div className="font-semibold mb-1">Enter your nickname to join:</div>
+            <div className="font-semibold mb-1">
+              {isOrganizer && !players.includes(nickname)
+                ? "Enter your nickname to join as a player (optional):"
+                : "Enter your nickname to join:"}
+            </div>
+            {isOrganizer && !players.includes(nickname) && (
+              <div className="text-sm text-gray-600 mb-2">
+                As the organizer, you can manage the game without playing. You can either join as a player or just start the game once players have joined.
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <input
                 className="px-2 py-1 border rounded w-full"
@@ -165,7 +174,7 @@ export default function MultiplayerLobby({
           {isOrganizer && (
             <button
               className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
-              disabled={players.length < 2}
+              disabled={players.length < 1}
               onClick={onStartGame}
             >
               Start Game
