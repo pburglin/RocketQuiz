@@ -514,10 +514,23 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
               <div className="font-semibold mb-1">Players in lobby:</div>
               <ul className="list-disc pl-6">
                 {players.map((p) => (
-                  <li key={p} className={p === nickname ? "font-bold text-emerald-700" : ""}>
-                    {p}
-                    {isOrganizer && p === nickname && " (You, Organizer)"}
-                    {!isOrganizer && p === nickname && " (You)"}
+                  <li key={p} className={p === nickname ? "font-bold text-emerald-700 flex items-center" : "flex items-center"}>
+                    <span>{p}</span>
+                    {isOrganizer && p === nickname && <span> (You, Organizer)</span>}
+                    {!isOrganizer && p === nickname && <span> (You)</span>}
+                    {isOrganizer && p !== nickname && (
+                      <button
+                        className="ml-2 px-2 py-0.5 bg-red-500 text-white rounded text-xs"
+                        onClick={async () => {
+                          if (sessionId) {
+                            const playerRef = doc(db, "sessions", sessionId, "players", p);
+                            await (await import("firebase/firestore")).deleteDoc(playerRef);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
