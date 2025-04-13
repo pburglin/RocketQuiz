@@ -24,24 +24,25 @@ export default function Leaderboard({
         <>
           <div className="font-bold mb-2 text-lg">Final Leaderboard</div>
           <ul className="list-decimal pl-6 text-left mb-8">
-            {mpLeaderboard.map((nick: string, i: number) => {
-              const totalScore = mpScores[nick] || 0;
-              const baseScore = 1000 * Math.floor(totalScore / 1000); // Estimate base score (1000 per correct answer)
-              const speedBonus = totalScore - baseScore; // Estimate speed bonus
-              
-              return (
-                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {totalScore} pts
-                  {totalScore > 0 && (
-                    <span className="text-sm text-gray-600 ml-1">
-                      ({Math.floor(totalScore / 1000)} correct × 1000 + {speedBonus} speed bonus)
-                    </span>
-                  )}
-                  {i === 0 && totalScore > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                  {nick === nickname && " (You)"}
+            {mpLeaderboard
+              .map((nick: string) => {
+                const totalScore = mpScores[nick] || 0;
+                const baseScore = 1000 * Math.floor(totalScore / 1000); // Estimate base score (1000 per correct answer)
+                const speedBonus = totalScore - baseScore; // Estimate speed bonus
+                return { nick, totalScore, baseScore, speedBonus };
+              })
+              // Sort by score (highest first)
+              .sort((a: { totalScore: number }, b: { totalScore: number }) => b.totalScore - a.totalScore)
+              .map((item: { nick: string; totalScore: number; baseScore: number; speedBonus: number }, i: number) => (
+                <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
+                  {item.nick}: {item.totalScore} pts
+                  <span className="text-sm text-gray-600 ml-1">
+                    ({Math.floor(item.totalScore / 1000)} correct × 1000 + {item.speedBonus} speed bonus)
+                  </span>
+                  {i === 0 && item.totalScore > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                  {item.nick === nickname && " (You)"}
                 </li>
-              );
-            })}
+              ))}
           </ul>
         </>
       ) : (

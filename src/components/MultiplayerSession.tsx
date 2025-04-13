@@ -154,40 +154,44 @@ export default function MultiplayerSession({
         <div className="mb-6">
           <div className="font-bold mb-2">Leaderboard (This Question)</div>
           <ul className="list-decimal pl-6">
-            {players.map((nick: string, i: number) => {
-              // Find this player's answer for the current question
-              const ans = mpAllAnswers.find((a: any) => a.nickname === nick && a.qIdx === current);
-              let points = 0;
-              let speedBonus = 0;
-              if (ans && ans.answer === q.correctAnswer && typeof ans.answeredAt?.toMillis === "function" && q.time) {
-                // Calculate speed bonus
-                const answeredAt = ans.answeredAt.toMillis();
-                // Get the question start time from the answer object
-                if (ans.questionStart && typeof ans.questionStart.toMillis === "function") {
-                  const questionStart = ans.questionStart.toMillis();
-                  const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000);
-                  const maxTime = q.time || 30;
-                  const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
-                  // Exponential scoring to reward faster answers more significantly
-                  speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
-                  points = 1000 + speedBonus;
-                } else {
-                  points = 1000; // fallback if no timing
+            {players
+              .map((nick: string) => {
+                // Find this player's answer for the current question
+                const ans = mpAllAnswers.find((a: any) => a.nickname === nick && a.qIdx === current);
+                let points = 0;
+                let speedBonus = 0;
+                if (ans && ans.answer === q.correctAnswer && typeof ans.answeredAt?.toMillis === "function" && q.time) {
+                  // Calculate speed bonus
+                  const answeredAt = ans.answeredAt.toMillis();
+                  // Get the question start time from the answer object
+                  if (ans.questionStart && typeof ans.questionStart.toMillis === "function") {
+                    const questionStart = ans.questionStart.toMillis();
+                    const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000);
+                    const maxTime = q.time || 30;
+                    const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+                    // Exponential scoring to reward faster answers more significantly
+                    speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
+                    points = 1000 + speedBonus;
+                  } else {
+                    points = 1000; // fallback if no timing
+                  }
                 }
-              }
-              // Show 0 for no answer or wrong answer
-              return (
-                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {points} pts
-                  {points > 1000 && (
+                return { nick, points, speedBonus };
+              })
+              // Sort players by points (highest first)
+              .sort((a: { points: number }, b: { points: number }) => b.points - a.points)
+              .map((item: { nick: string; points: number; speedBonus: number }, i: number) => (
+                <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
+                  {item.nick}: {item.points} pts
+                  {item.points > 1000 && (
                     <span className="text-sm text-gray-600 ml-1">
-                      (1000 + {points - 1000} speed bonus)
+                      (1000 + {item.points - 1000} speed bonus)
                     </span>
                   )}
-                  {nick === nickname && " (You)"}
+                  {i === 0 && item.points > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                  {item.nick === nickname && " (You)"}
                 </li>
-              );
-            })}
+              ))}
           </ul>
         </div>
       )}
