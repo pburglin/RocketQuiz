@@ -51,9 +51,14 @@ export default function SinglePlayerSession({
     setNextQuestionTimer(10); // Start 10s countdown
     // Scoring
     if (q && idx === q.correctAnswer) {
-      const base = 100;
-      const bonus = Math.floor((timer / q.time) * 100);
-      setSpScore((prev) => prev + base + bonus);
+      const base = 1000; // Match multiplayer base score
+      // Calculate speed bonus based on remaining time
+      const timeElapsed = q.time - timer;
+      const maxTime = q.time || 30;
+      const speedFactor = Math.max(0, 1 - (timeElapsed / maxTime));
+      // Exponential scoring to reward faster answers more significantly
+      const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
+      setSpScore((prev) => prev + base + speedBonus);
     }
   };
 
@@ -147,6 +152,11 @@ export default function SinglePlayerSession({
       {/* Show score after each question */}
       <div className="mb-4 text-center text-blue-700 font-bold">
         Score: {spScore}
+        {showAnswer && spSelected === q.correctAnswer && (
+          <div className="text-sm text-gray-600">
+            (Last answer: 1000 base + {Math.round(spScore % 1000)} speed bonus)
+          </div>
+        )}
       </div>
       <div className="flex justify-between">
         <button

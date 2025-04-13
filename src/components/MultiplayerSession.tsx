@@ -156,6 +156,7 @@ export default function MultiplayerSession({
               // Find this player's answer for the current question
               const ans = mpAllAnswers.find((a: any) => a.nickname === nick && a.qIdx === current);
               let points = 0;
+              let speedBonus = 0;
               if (ans && ans.answer === q.correctAnswer && typeof ans.answeredAt?.toMillis === "function" && q.time) {
                 // Calculate speed bonus
                 const questionStart = q.questionStart ? q.questionStart : null;
@@ -163,7 +164,9 @@ export default function MultiplayerSession({
                   const answeredAt = ans.answeredAt.toMillis();
                   const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000);
                   const maxTime = q.time || 30;
-                  const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+                  const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+                  // Exponential scoring to reward faster answers more significantly
+                  speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
                   points = 1000 + speedBonus;
                 } else {
                   points = 1000; // fallback if no timing
@@ -172,7 +175,7 @@ export default function MultiplayerSession({
               // Show 0 for no answer or wrong answer
               return (
                 <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {points} pts
+                  {nick}: {points} pts {points > 1000 && `(1000 + ${points - 1000} speed bonus)`}
                   {nick === nickname && " (You)"}
                 </li>
               );

@@ -238,7 +238,10 @@ export default function MultiplayerGamePage() {
           const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000); // in seconds
           // Scoring: 1000 base + up to 1000 bonus (faster = more bonus, slower = less)
           const maxTime = q.time || 30;
-          const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+          // Enhanced speed bonus calculation - more weight on speed
+          const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+          // Exponential scoring to reward faster answers more significantly
+          const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
           const points = 1000 + speedBonus;
           newScores[a.nickname] = (newScores[a.nickname] || 0) + points;
         }
@@ -291,7 +294,10 @@ export default function MultiplayerGamePage() {
                 const answeredAt = a.answeredAt.toMillis();
                 const timeTaken = Math.max(0, (answeredAt - questionsStart[qIdx]) / 1000);
                 const maxTime = q.time || 30;
-                const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+                // Enhanced speed bonus calculation - more weight on speed
+                const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+                // Exponential scoring to reward faster answers more significantly
+                const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
                 const points = 1000 + speedBonus;
                 scores[a.nickname] = (scores[a.nickname] || 0) + points;
               }
