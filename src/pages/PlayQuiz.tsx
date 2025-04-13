@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import ColorCardPlaceholder from "../components/ColorCardPlaceholder";
+import QuizDetails from "../components/QuizDetails";
+import Leaderboard from "../components/Leaderboard";
 import { useParams, useNavigate } from "react-router-dom";
+import MultiplayerSession from "../components/MultiplayerSession";
+import MultiplayerLobby from "../components/MultiplayerLobby";
+import SinglePlayerSession from "../components/SinglePlayerSession";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { User as FirebaseUser } from "firebase/auth";
@@ -24,6 +29,9 @@ interface Quiz {
   tags?: string[];
 }
 
+// Memoize Leaderboard outside the component
+const MemoizedLeaderboard = React.memo(Leaderboard);
+
 const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -34,6 +42,8 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // "pre" = quiz details, "single" = single player, "multi-lobby" = multiplayer lobby, "multi-playing" = multiplayer game
   const [gameState, setGameState] = useState<"pre" | "single" | "multi-lobby" | "multi-playing" | "results">("pre");
+  const [quizFinished, setQuizFinished] = useState(false); // New state for transition
+  console.log("[PlayQuiz] Render, gameState:", gameState);
   const [current, setCurrent] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [timer, setTimer] = useState<number>(0);
@@ -175,6 +185,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
     // Cleanup interval if question changes or on unmount
     return () => {
+      console.log("[PlayQuiz] Cleanup single player timer effect");
       if (timerRef.current) clearInterval(timerRef.current as NodeJS.Timeout);
     };
     // eslint-disable-next-line
@@ -249,7 +260,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
               setMpSelected(null);
               setMpAllAnswers([]);
             } else {
-              setGameState("results"); // Show final results
+              setTimeout(() => setGameState("results"), 0); // Show final results asynchronously
             }
           }
           return null;
@@ -259,6 +270,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     }, 1000);
     return () => {
       cancelled = true;
+      console.log("[PlayQuiz] Cleanup next question timer effect");
       if (nextTimerRef.current) clearInterval(nextTimerRef.current);
     };
   }, [nextQuestionTimer, current, questions.length]);
@@ -282,6 +294,15 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       return () => unsub();
     }
   }, [sessionId, gameState]);
+
+  // Effect to handle transition to results state
+  useEffect(() => {
+    if (quizFinished) {
+      console.log("[PlayQuiz] quizFinished is true, setting gameState to results");
+      setGameState("results");
+      setQuizFinished(false); // Reset the flag
+    }
+  }, [quizFinished]);
 
   if (loading) {
     return (
@@ -323,241 +344,91 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // PRE-GAME: Show quiz details, collapsed questions, and start buttons
   if (gameState === "pre") {
-    const q = questions.length > 0 ? questions[current] : null;
+    console.log("[PlayQuiz] Render block: pre");
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
-        {quiz.image && quiz.image.trim() !== "" ? (
-          <img
-            src={quiz.image}
-            alt={quiz.title}
-            className="w-full h-48 object-cover rounded mb-4"
-          />
-        ) : (
-          <ColorCardPlaceholder
-            id={quiz.id}
-            text={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
-            className="w-full h-48 rounded mb-4"
-          />
-        )}
-        <div className="mb-4 text-gray-600">{quiz.description}</div>
-        <div className="mb-2 flex flex-wrap gap-2">
-          {quiz.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
-          {quiz.language && (
-            <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
-              {quiz.language}
-            </span>
-          )}
-        </div>
-        {/* Collapsible Questions */}
-        <div className="my-6">
-          <button
-            className="px-4 py-2 bg-gray-100 rounded border text-gray-700 font-semibold"
-            onClick={() => setQuestionsCollapsed((c) => !c)}
-          >
-            {questionsCollapsed ? "Show Questions (Spoilers!)" : "Hide Questions"}
-          </button>
-          {!questionsCollapsed && (
-            <div className="mt-4 space-y-2">
-              {questions.map((q, idx) => (
-                <details key={q.id} open={false} className="border rounded p-2">
-                  <summary className="font-semibold">
-                    Question {idx + 1}
-                  </summary>
-                  <div className="mt-2">{q.question}</div>
-                  {/* Optionally, show answers here if desired */}
-                </details>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Start Buttons */}
-        <div className="flex gap-4 mt-8">
-          <button
-            className="px-6 py-2 bg-emerald-600 text-white rounded font-bold"
-            onClick={() => setGameState("single")}
-          >
-            Start Single Player
-          </button>
-          <button
-            className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
-            onClick={() => {
-              setIsOrganizer(true); // Set organizer flag
-              setGameState("multi-lobby");
-            }}
-          >
-            Start Multiplayer
-          </button>
-        </div>
-        <div className="mt-6">
-          <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
-            onClick={() => navigate("/search")}
-          >
-            Back to Search
-          </button>
-        </div>
-      </div>
+      <QuizDetails
+        quiz={quiz}
+        questions={questions}
+        questionsCollapsed={questionsCollapsed}
+        setQuestionsCollapsed={setQuestionsCollapsed}
+        onStartSinglePlayer={() => {
+          console.log("[PlayQuiz] onStartSinglePlayer");
+          setGameState("single");
+        }}
+        onStartMultiplayer={() => {
+          console.log("[PlayQuiz] onStartMultiplayer");
+          setTimeout(() => {
+            setIsOrganizer(true);
+            setGameState("multi-lobby");
+          }, 0);
+        }}
+        onBackToSearch={() => {
+          console.log("[PlayQuiz] onBackToSearch");
+          navigate("/search");
+        }}
+      />
     );
   }
 
   // SINGLE PLAYER: Show original question/answer UI
   if (gameState === "single") {
-    const q = questions.length > 0 ? questions[current] : null;
-    // Single player: handle answer click
-    const handleSinglePlayerAnswer = (idx: number) => {
-      if (showAnswer || !q) return;
-      setSpSelected(idx);
-      setShowAnswer(true);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setNextQuestionTimer(10); // Start 10s countdown
-      // Scoring
-      if (q && idx === q.correctAnswer) {
-        const base = 100;
-        const bonus = Math.floor((timer / q.time) * 100);
-        setSpScore((prev) => prev + base + bonus);
-      }
-    };
-
-    if (!q) {
-      return (
-        <div className="max-w-2xl mx-auto p-8 text-center">
-          <div className="text-lg text-gray-700">No question data available.</div>
-        </div>
-      );
-    }
-
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
-        <div className="mb-2 flex flex-wrap gap-2">
-          {quiz.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
-          {quiz.language && (
-            <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
-              {quiz.language}
-            </span>
-          )}
-        </div>
-        <div className="mt-6 mb-2 text-lg font-semibold">
-          Question {current + 1} of {questions.length}
-        </div>
-        <div className="mb-2 font-bold">{q.question}</div>
-        {q.image && q.image.trim() !== "" ? (
-          <img
-            src={q.image}
-            alt={`Question ${current + 1}`}
-            className="w-full h-40 object-cover rounded mb-4"
-          />
-        ) : (
-          <ColorCardPlaceholder
-            id={q.id}
-            text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
-            className="w-full h-40 rounded mb-4"
-          />
-        )}
-        <div className="mb-4">
-          <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
-            Time left: {timer} second{timer !== 1 ? "s" : ""}
-          </span>
-        </div>
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {q.answers.map((answer, idx) => (
-            <button
-              key={idx}
-              className={`w-full px-4 py-2 rounded border text-left transition
-                ${
-                  showAnswer
-                    ? idx === q.correctAnswer
-                      ? "bg-green-200 border-green-400 font-bold"
-                      : idx === spSelected
-                      ? "bg-red-100 border-gray-200"
-                      : "bg-white border-gray-200"
-                    : "bg-white border-gray-200 hover:bg-emerald-50"
-                }
-              `}
-              disabled={showAnswer}
-              onClick={() => handleSinglePlayerAnswer(idx)}
-            >
-              {answer}
-              {showAnswer && idx === q.correctAnswer && (
-                <span className="ml-2 text-green-700 font-bold">(Correct)</span>
-              )}
-              {showAnswer && idx === spSelected && idx !== q.correctAnswer && (
-                <span className="ml-2 text-red-700 font-bold">(Your pick)</span>
-              )}
-            </button>
-          ))}
-        </div>
-        {!showAnswer && (
-          <div className="mb-4 text-center text-gray-600">
-            Waiting {timer} second{timer !== 1 ? "s" : ""} before showing the correct answer...
-          </div>
-        )}
-        {showAnswer && (
-          <div className="mb-4 text-center text-green-700 font-semibold">
-            Correct answer shown!{" "}
-            {current < questions.length - 1 ? "Click Next to continue." : "Quiz complete."}
-          </div>
-        )}
-        {/* Show score after each question */}
-        <div className="mb-4 text-center text-blue-700 font-bold">
-          Score: {spScore}
-        </div>
-        <div className="flex justify-between">
-          <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
-            onClick={() => setGameState("pre")}
-          >
-            Quit
-          </button>
-          {showAnswer && current < questions.length - 1 && (
-            <button
-              className="px-4 py-2 bg-emerald-600 text-white rounded"
-              onClick={() => {
-                setCurrent((c) => c + 1);
-                setShowAnswer(false);
-                setSpSelected(null);
-              }}
-            >
-              Next {nextQuestionTimer !== null ? `(${nextQuestionTimer}s)` : ""}
-            </button>
-          )}
-          {showAnswer && current === questions.length - 1 && (
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={() => setGameState("results")}
-            >
-              Finish
-            </button>
-          )}
-        </div>
-      </div>
+      <SinglePlayerSession
+        quiz={quiz}
+        questions={questions}
+        current={current}
+        setCurrent={setCurrent}
+        timer={timer}
+        setTimer={setTimer}
+        showAnswer={showAnswer}
+        setShowAnswer={setShowAnswer}
+        spScore={spScore}
+        setSpScore={setSpScore}
+        spSelected={spSelected}
+        setSpSelected={setSpSelected}
+        nextQuestionTimer={nextQuestionTimer}
+        setNextQuestionTimer={setNextQuestionTimer}
+        timerRef={timerRef}
+        onQuit={() => setGameState("pre")}
+        onFinish={() => {
+          console.log("[PlayQuiz] onFinish triggered (from SinglePlayerSession)");
+          setQuizFinished(true); // Set flag instead of direct state change
+        }}
+      />
     );
-  }
 
   // MULTIPLAYER LOBBY: Show multiplayer lobby UI
   if (gameState === "multi-lobby") {
-    if (loading || !quiz) {
-      return (
-        <div className="max-w-2xl mx-auto p-8 text-center">
-          <div className="text-lg text-gray-700">Loading quiz and setting up lobby...</div>
-        </div>
-      );
-    }
+    console.log("[PlayQuiz] Render block: multi-lobby");
+    return (
+      <MultiplayerLobby
+        quiz={quiz}
+        sessionId={sessionId}
+        sessionUrl={sessionUrl}
+        nickname={nickname}
+        setNickname={setNickname}
+        nicknameError={nicknameError}
+        setNicknameError={setNicknameError}
+        players={players}
+        isOrganizer={isOrganizer}
+        lobbyLoading={lobbyLoading}
+        setLobbyLoading={setLobbyLoading}
+        setSessionId={setSessionId}
+        setSessionUrl={setSessionUrl}
+        setPlayers={setPlayers}
+        setIsOrganizer={setIsOrganizer}
+        setGameState={setGameState}
+        onBackToQuizDetails={() => {
+          console.log("[PlayQuiz] onBackToQuizDetails (multi-lobby)");
+          setGameState("pre");
+          setSessionId(null);
+          setPlayers([]);
+          setNickname("");
+          setIsOrganizer(false);
+        }}
+      />
+    );
+  }
     return (
       <div className="max-w-2xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
@@ -761,193 +632,69 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // MULTIPLAYER GAME: Show multiplayer question/answer UI and leaderboard
   if (gameState === "multi-playing") {
-    const q = questions.length > 0 ? questions[current] : null;
-    // End of quiz
-    const isLastQuestion = current === questions.length - 1;
-
-    if (!q) {
-      return (
-        <div className="max-w-2xl mx-auto p-8 text-center">
-          <div className="text-lg text-gray-700">No question data available.</div>
-        </div>
-      );
-    }
-
+    console.log("[PlayQuiz] Render block: multi-playing");
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
-        <div className="mb-2 flex flex-wrap gap-2">
-          {quiz.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
-          {quiz.language && (
-            <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
-              {quiz.language}
-            </span>
-          )}
-        </div>
-        <div className="mt-6 mb-2 text-lg font-semibold">
-          Question {current + 1} of {questions.length}
-        </div>
-        <div className="mb-2 font-bold">{q.question}</div>
-        {q.image && q.image.trim() !== "" ? (
-          <img
-            src={q.image}
-            alt={`Question ${current + 1}`}
-            className="w-full h-40 object-cover rounded mb-4"
-          />
-        ) : (
-          <ColorCardPlaceholder
-            id={q.id}
-            text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
-            className="w-full h-40 rounded mb-4"
-          />
-        )}
-        <div className="mb-4">
-          <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
-            Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
-          </span>
-        </div>
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {q.answers.map((answer, idx) => (
-            <button
-              key={idx}
-              className={`w-full px-4 py-2 rounded border text-left transition
-                ${
-                  mpShowAnswer
-                    ? idx === q.correctAnswer
-                      ? "bg-green-200 border-green-400 font-bold"
-                      : "bg-red-100 border-gray-200"
-                    : mpSelected === idx
-                    ? "bg-emerald-100 border-emerald-400"
-                    : "bg-white border-gray-200 hover:bg-emerald-50"
-                }
-              `}
-              disabled={mpShowAnswer || mpAnswered}
-              onClick={() => submitMpAnswer(idx)}
-            >
-              {answer}
-              {mpShowAnswer && idx === q.correctAnswer && (
-                <span className="ml-2 text-green-700 font-bold">(Correct)</span>
-              )}
-            </button>
-          ))}
-        </div>
-        {!mpShowAnswer && (
-          <div className="mb-4 text-center text-gray-600">
-            Waiting for all players to answer or time to run out...
-          </div>
-        )}
-        {mpShowAnswer && (
-          <div className="mb-4 text-center text-green-700 font-semibold">
-            Correct answer shown!{" "}
-            {isLastQuestion ? "Quiz complete." : "Click Next to continue."}
-          </div>
-        )}
-        {/* Leaderboard */}
-        {mpShowAnswer && (
-          <div className="mb-6">
-            <div className="font-bold mb-2">Leaderboard</div>
-            <ul className="list-decimal pl-6">
-              {mpLeaderboard.map((nick, i) => (
-                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {mpScores[nick] || 0} pts
-                  {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                  {nick === nickname && " (You)"}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
-            onClick={() => setGameState("pre")}
-          >
-            Quit
-          </button>
-          {mpShowAnswer && !isLastQuestion && (
-            <button
-              className="px-4 py-2 bg-emerald-600 text-white rounded"
-              onClick={() => {
-                setCurrent((c) => c + 1);
-                setNextQuestionTimer(null); // Clear timer on manual click
-                if (nextTimerRef.current) clearInterval(nextTimerRef.current);
-              }}
-            >
-              Next {nextQuestionTimer !== null ? `(${nextQuestionTimer}s)` : ""}
-            </button>
-          )}
-          {mpShowAnswer && isLastQuestion && (
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={() => setGameState("results")}
-            >
-              Finish
-            </button>
-          )}
-        </div>
-      </div>
+      <MultiplayerSession
+        quiz={quiz}
+        questions={questions}
+        current={current}
+        setCurrent={setCurrent}
+        mpShowAnswer={mpShowAnswer}
+        setMpShowAnswer={setMpShowAnswer}
+        mpTimer={mpTimer}
+        setMpTimer={setMpTimer}
+        mpAnswered={mpAnswered}
+        setMpAnswered={setMpAnswered}
+        mpAllAnswers={mpAllAnswers}
+        setMpAllAnswers={setMpAllAnswers}
+        mpScores={mpScores}
+        setMpScores={setMpScores}
+        mpLeaderboard={mpLeaderboard}
+        setMpLeaderboard={setMpLeaderboard}
+        mpSelected={mpSelected}
+        setMpSelected={setMpSelected}
+        nextQuestionTimer={nextQuestionTimer}
+        setNextQuestionTimer={setNextQuestionTimer}
+        timerRef={timerRef}
+        players={players}
+        nickname={nickname}
+        sessionId={sessionId}
+        submitMpAnswer={submitMpAnswer}
+        onQuit={() => {
+          console.log("[PlayQuiz] onQuit (multi-playing)");
+          setGameState("pre");
+        }}
+        onFinish={() => {
+          console.log("[PlayQuiz] onFinish (multi-playing)");
+          setQuizFinished(true); // Set flag instead of direct state change
+        }}
+      />
     );
   }
   // FINAL RESULTS SCREEN
   if (gameState === "results") {
-    const isMultiplayer = sessionId !== null; // Check if it was a multiplayer game
+    const isMultiplayer = sessionId !== null;
     return (
-      <div className="max-w-2xl mx-auto p-4 text-center">
-        <h1 className="text-3xl font-bold mb-4">Quiz Complete!</h1>
-        <h2 className="text-xl font-semibold mb-6">{quiz.title}</h2>
-
-        {isMultiplayer ? (
-          <>
-            <div className="font-bold mb-2 text-lg">Final Leaderboard</div>
-            <ul className="list-decimal pl-6 text-left mb-8">
-              {mpLeaderboard.map((nick, i) => (
-                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {mpScores[nick] || 0} pts
-                  {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                  {nick === nickname && " (You)"}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <div className="mb-8">
-            <div className="font-bold mb-2 text-lg">Your Final Score</div>
-            <div className="text-4xl text-blue-700 font-bold">{spScore}</div>
-          </div>
-        )}
-
-        <div className="flex justify-center gap-4">
-          <button
-            className="px-6 py-2 bg-emerald-600 text-white rounded font-bold"
-            onClick={() => {
-              // Reset state for replay
-              setCurrent(0);
-              setShowAnswer(false);
-              setSpScore(0);
-              setSpSelected(null);
-              setMpScores({});
-              setMpLeaderboard([]);
-              setNextQuestionTimer(null);
-              setGameState("pre");
-            }}
-          >
-            Play Again
-          </button>
-          <button
-            className="px-6 py-2 bg-gray-600 text-white rounded font-bold"
-            onClick={() => navigate("/search")}
-          >
-            Find Another Quiz
-          </button>
-        </div>
-      </div>
+      <MemoizedLeaderboard
+        key={`results-${Date.now()}`}
+        quiz={quiz}
+        isMultiplayer={isMultiplayer}
+        mpLeaderboard={mpLeaderboard}
+        mpScores={mpScores}
+        nickname={nickname}
+        spScore={spScore}
+        onPlayAgain={() => {
+          setCurrent(0);
+          setShowAnswer(false);
+          setSpScore(0);
+          setSpSelected(null);
+          setMpScores({});
+          setMpLeaderboard([]);
+          setNextQuestionTimer(null);
+          setGameState("pre");
+        }}
+        onFindAnotherQuiz={() => navigate("/search")}
+      />
     );
   }
 

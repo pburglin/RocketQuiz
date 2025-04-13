@@ -16,7 +16,7 @@ export default function QuizCard({
 }) {
   return (
     <a
-      href={`/quiz/${quiz.id}`}
+      href={`/play/quiz/${quiz.id}/details`}
       className="min-w-[300px] max-w-xs bg-white rounded-xl shadow-lg hover:shadow-2xl transition flex flex-col overflow-hidden border border-gray-100"
     >
       {quiz.image && quiz.image.trim() !== "" ? (

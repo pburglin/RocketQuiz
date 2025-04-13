@@ -3,6 +3,11 @@ import Home from "./pages/Home";
 import SearchQuiz from "./pages/SearchQuiz";
 import CreateQuiz from "./pages/CreateQuiz";
 import PlayQuiz from "./pages/PlayQuiz";
+import QuizDetailsPage from "./pages/QuizDetailsPage";
+import SinglePlayerPage from "./pages/SinglePlayerPage";
+import MultiplayerLobbyPage from "./pages/MultiplayerLobbyPage";
+import MultiplayerGamePage from "./pages/MultiplayerGamePage";
+import ResultsPage from "./pages/ResultsPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Navbar from "./components/Navbar";
@@ -32,6 +37,11 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/quiz/:id" element={<PlayQuiz user={user} />} />
           <Route path="/play/quiz/:id" element={<PlayQuiz user={user} />} />
+          <Route path="/play/quiz/:id/details" element={<QuizDetailsPage />} />
+          <Route path="/play/quiz/:id/single" element={<SinglePlayerPage />} />
+          <Route path="/play/quiz/:id/multiplayer/lobby" element={<MultiplayerLobbyPage />} />
+          <Route path="/play/quiz/:id/multiplayer/game" element={<MultiplayerGamePage />} />
+          <Route path="/play/quiz/:id/results" element={<ResultsPage />} />
         </Routes>
       </div>
     </Router>
