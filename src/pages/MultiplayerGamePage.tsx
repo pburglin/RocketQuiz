@@ -71,16 +71,24 @@ export default function MultiplayerGamePage() {
   }, []);
 
   // Listen for currentQuestion in session doc (sync all clients)
+  // Only reset state when question index changes
+  const prevQuestionRef = useRef<number | null>(null);
   useEffect(() => {
     if (!sessionId) return;
     const sessionRef = doc(db, "sessions", sessionId);
     const unsub = onSnapshot(sessionRef, (snap) => {
       if (snap.exists() && typeof snap.data().currentQuestion === "number") {
-        setCurrent(snap.data().currentQuestion);
-        setMpAnswered(false);
-        setMpSelected(null);
-        setMpShowAnswer(false);
-        setNextQuestionTimer(null);
+        const newCurrent = snap.data().currentQuestion;
+        setCurrent((prev) => {
+          if (prev !== newCurrent) {
+            prevQuestionRef.current = prev;
+            setMpAnswered(false);
+            setMpSelected(null);
+            setMpShowAnswer(false);
+            setNextQuestionTimer(null);
+          }
+          return newCurrent;
+        });
       }
     });
     return () => unsub();

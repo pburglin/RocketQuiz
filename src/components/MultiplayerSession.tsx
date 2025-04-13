@@ -98,6 +98,12 @@ export default function MultiplayerSession({
             `}
             disabled={mpShowAnswer || mpAnswered}
             onClick={() => submitMpAnswer(idx)}
+            style={{
+              opacity: mpAnswered && mpSelected !== idx ? 0.5 : 1,
+              pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== idx) ? "none" : "auto",
+              borderWidth: mpSelected === idx ? 3 : undefined,
+              borderColor: mpSelected === idx ? "#059669" : undefined, // emerald-600
+            }}
           >
             {answer}
             {mpShowAnswer && idx === q.correctAnswer && (
@@ -109,6 +115,24 @@ export default function MultiplayerSession({
       {!mpShowAnswer && (
         <div className="mb-4 text-center text-gray-600">
           Waiting for all players to answer or time to run out...
+          <div className="mt-2 flex flex-col items-center">
+            <div className="font-semibold text-sm mb-1">Answered:</div>
+            <ul className="text-xs">
+              {mpAllAnswers.map((a: any, i: number) => (
+                <li key={a.nickname}>
+                  <span className={a.nickname === nickname ? "font-bold text-emerald-700" : ""}>
+                    {i + 1}. {a.nickname}
+                  </span>
+                  {typeof a.answer === "number" && q.answers[a.answer] !== undefined && (
+                    <span className="ml-2 italic text-gray-500">
+                      ({q.answers[a.answer]})
+                    </span>
+                  )}
+                  {a.nickname === nickname && " (You)"}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
       {mpShowAnswer && (
