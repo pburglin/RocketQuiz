@@ -43,6 +43,28 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
 
   // Multiplayer session state
+
+  // Multiplayer game state (must be at top level for React hooks)
+  const [mpShowAnswer, setMpShowAnswer] = useState(false);
+  const [mpTimer, setMpTimer] = useState(0);
+  const [mpAnswered, setMpAnswered] = useState(false);
+  const [mpAllAnswers, setMpAllAnswers] = useState<any[]>([]);
+  const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
+  const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
+  const [mpSelected, setMpSelected] = useState<number | null>(null);
+
+  // Helper for multiplayer answer submission
+  const submitMpAnswer = async (idx: number) => {
+    if (!sessionId || !questions[current] || mpAnswered) return;
+    setMpAnswered(true);
+    setMpSelected(idx);
+    const answersRef = doc(db, "sessions", sessionId, "answers", questions[current].id, "responses", nickname);
+    await setDoc(answersRef, {
+      answer: idx,
+      time: questions[current].time - mpTimer,
+      submittedAt: serverTimestamp(),
+    });
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [nickname, setNickname] = useState<string>("");
@@ -568,216 +590,215 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     );
   }
 
+  // Listen for answers for this question (multiplayer)
+  useEffect(() => {
+    if (
+      gameState !== "multi-playing" ||
+      !sessionId ||
+      !questions[current]
+    )
+      return;
+    const answersRef = collection(
+      db,
+      "sessions",
+      sessionId,
+      "answers",
+      questions[current].id,
+      "responses"
+    );
+    const unsub = onSnapshot(answersRef, (snap) => {
+      const all = snap.docs.map((doc) => ({ ...doc.data(), nickname: doc.id }));
+      setMpAllAnswers(all);
+      // If all players have answered, show answer
+      if (all.length === players.length) {
+        setMpShowAnswer(true);
+      }
+    });
+    return () => unsub();
+    // eslint-disable-next-line
+  }, [gameState, sessionId, current, questions, players.length]);
+
+  // Timer for multiplayer
+  useEffect(() => {
+    if (gameState !== "multi-playing") return;
+    if (mpShowAnswer) return;
+    setMpTimer(questions[current]?.time || 0);
+    const interval = setInterval(() => {
+      setMpTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setMpShowAnswer(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line
+  }, [gameState, current, questions, mpShowAnswer]);
+
+  // Calculate scores after each question
+  useEffect(() => {
+    if (gameState !== "multi-playing") return;
+    if (!mpShowAnswer) return;
+    // Calculate scores
+    const correctIdx = questions[current]?.correctAnswer;
+    let newScores = { ...mpScores };
+    mpAllAnswers.forEach((ans) => {
+      if (ans.answer === correctIdx) {
+        // Base points + speed bonus
+        const base = 100;
+        const speed = Math.max(0, questions[current]?.time - ans.time);
+        const bonus = Math.floor((speed / (questions[current]?.time || 1)) * 100);
+        newScores[ans.nickname] = (newScores[ans.nickname] || 0) + base + bonus;
+      }
+    });
+    setMpScores(newScores);
+    // Sort leaderboard
+    const sorted = Object.entries(newScores)
+      .sort((a, b) => b[1] - a[1])
+      .map(([nick]) => nick);
+    setMpLeaderboard(sorted);
+    // eslint-disable-next-line
+  }, [gameState, mpShowAnswer]);
+
+  // Reset state for next question
+  useEffect(() => {
+    if (gameState !== "multi-playing") return;
+    setMpShowAnswer(false);
+    setMpAnswered(false);
+    setMpSelected(null);
+    setMpAllAnswers([]);
+    // eslint-disable-next-line
+  }, [gameState, current]);
+
   // MULTIPLAYER GAME: Show multiplayer question/answer UI and leaderboard
   if (gameState === "multi-playing") {
-    // Multiplayer state
-    const [mpShowAnswer, setMpShowAnswer] = useState(false);
-    const [mpTimer, setMpTimer] = useState(questions[current].time);
-    const [mpAnswered, setMpAnswered] = useState(false);
-    const [mpAllAnswers, setMpAllAnswers] = useState<any[]>([]);
-    const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
-    const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
-    const [mpSelected, setMpSelected] = useState<number | null>(null);
+    // Multiplayer state hooks moved to top level (see above)
+    // Render multiplayer game UI using these hooks when gameState === "multi-playing"
+    if (gameState === "multi-playing") {
+      // End of quiz
+      const isLastQuestion = current === questions.length - 1;
 
-    // Listen for answers for this question
-    useEffect(() => {
-      if (!sessionId || !questions[current]) return;
-      const answersRef = collection(db, "sessions", sessionId, "answers", questions[current].id, "responses");
-      const unsub = onSnapshot(answersRef, (snap) => {
-        const all = snap.docs.map((doc) => ({ ...doc.data(), nickname: doc.id }));
-        setMpAllAnswers(all);
-        // If all players have answered, show answer
-        if (all.length === players.length) {
-          setMpShowAnswer(true);
-        }
-      });
-      return () => unsub();
-    }, [sessionId, current, questions, players.length]);
-
-    // Timer for multiplayer
-    useEffect(() => {
-      if (mpShowAnswer) return;
-      setMpTimer(questions[current].time);
-      const interval = setInterval(() => {
-        setMpTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            setMpShowAnswer(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }, [current, questions, mpShowAnswer]);
-
-    // Submit answer
-    const submitMpAnswer = async (idx: number) => {
-      if (!sessionId || !questions[current] || mpAnswered) return;
-      setMpAnswered(true);
-      setMpSelected(idx);
-      const answersRef = doc(db, "sessions", sessionId, "answers", questions[current].id, "responses", nickname);
-      await setDoc(answersRef, {
-        answer: idx,
-        time: questions[current].time - mpTimer,
-        submittedAt: serverTimestamp(),
-      });
-    };
-
-    // Calculate scores after each question
-    useEffect(() => {
-      if (!mpShowAnswer) return;
-      // Calculate scores
-      const correctIdx = questions[current].correctAnswer;
-      let newScores = { ...mpScores };
-      mpAllAnswers.forEach((ans) => {
-        if (ans.answer === correctIdx) {
-          // Base points + speed bonus
-          const base = 100;
-          const speed = Math.max(0, questions[current].time - ans.time);
-          const bonus = Math.floor((speed / questions[current].time) * 100);
-          newScores[ans.nickname] = (newScores[ans.nickname] || 0) + base + bonus;
-        }
-      });
-      setMpScores(newScores);
-      // Sort leaderboard
-      const sorted = Object.entries(newScores)
-        .sort((a, b) => b[1] - a[1])
-        .map(([nick]) => nick);
-      setMpLeaderboard(sorted);
-    }, [mpShowAnswer]);
-
-    // Reset state for next question
-    useEffect(() => {
-      setMpShowAnswer(false);
-      setMpAnswered(false);
-      setMpSelected(null);
-      setMpAllAnswers([]);
-    }, [current]);
-
-    // End of quiz
-    const isLastQuestion = current === questions.length - 1;
-
-    return (
-      <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
-        <div className="mb-2 flex flex-wrap gap-2">
-          {quiz.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
-          {quiz.language && (
-            <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
-              {quiz.language}
-            </span>
+      return (
+        <div className="max-w-2xl mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
+          <div className="mb-2 flex flex-wrap gap-2">
+            {quiz.tags?.map((tag) => (
+              <span
+                key={tag}
+                className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
+              >
+                {tag}
+              </span>
+            ))}
+            {quiz.language && (
+              <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
+                {quiz.language}
+              </span>
+            )}
+          </div>
+          <div className="mt-6 mb-2 text-lg font-semibold">
+            Question {current + 1} of {questions.length}
+          </div>
+          <div className="mb-2 font-bold">{questions[current].question}</div>
+          {questions[current].image && questions[current].image.trim() !== "" ? (
+            <img
+              src={questions[current].image}
+              alt={`Question ${current + 1}`}
+              className="w-full h-40 object-cover rounded mb-4"
+            />
+          ) : (
+            <ColorCardPlaceholder
+              id={questions[current].id}
+              text={questions[current].question ? questions[current].question.charAt(0).toUpperCase() : "?"}
+              className="w-full h-40 rounded mb-4"
+            />
           )}
-        </div>
-        <div className="mt-6 mb-2 text-lg font-semibold">
-          Question {current + 1} of {questions.length}
-        </div>
-        <div className="mb-2 font-bold">{questions[current].question}</div>
-        {questions[current].image && questions[current].image.trim() !== "" ? (
-          <img
-            src={questions[current].image}
-            alt={`Question ${current + 1}`}
-            className="w-full h-40 object-cover rounded mb-4"
-          />
-        ) : (
-          <ColorCardPlaceholder
-            id={questions[current].id}
-            text={questions[current].question ? questions[current].question.charAt(0).toUpperCase() : "?"}
-            className="w-full h-40 rounded mb-4"
-          />
-        )}
-        <div className="mb-4">
-          <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
-            Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
-          </span>
-        </div>
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {questions[current].answers.map((answer, idx) => (
-            <button
-              key={idx}
-              className={`w-full px-4 py-2 rounded border text-left transition
-                ${
-                  mpShowAnswer
-                    ? idx === questions[current].correctAnswer
-                      ? "bg-green-200 border-green-400 font-bold"
-                      : "bg-red-100 border-gray-200"
-                    : mpSelected === idx
-                    ? "bg-emerald-100 border-emerald-400"
-                    : "bg-white border-gray-200 hover:bg-emerald-50"
-                }
-              `}
-              disabled={mpShowAnswer || mpAnswered}
-              onClick={() => submitMpAnswer(idx)}
-            >
-              {answer}
-              {mpShowAnswer && idx === questions[current].correctAnswer && (
-                <span className="ml-2 text-green-700 font-bold">(Correct)</span>
-              )}
-            </button>
-          ))}
-        </div>
-        {!mpShowAnswer && (
-          <div className="mb-4 text-center text-gray-600">
-            Waiting for all players to answer or time to run out...
+          <div className="mb-4">
+            <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
+              Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
+            </span>
           </div>
-        )}
-        {mpShowAnswer && (
-          <div className="mb-4 text-center text-green-700 font-semibold">
-            Correct answer shown!{" "}
-            {isLastQuestion ? "Quiz complete." : "Click Next to continue."}
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {questions[current].answers.map((answer, idx) => (
+              <button
+                key={idx}
+                className={`w-full px-4 py-2 rounded border text-left transition
+                  ${
+                    mpShowAnswer
+                      ? idx === questions[current].correctAnswer
+                        ? "bg-green-200 border-green-400 font-bold"
+                        : "bg-red-100 border-gray-200"
+                      : mpSelected === idx
+                      ? "bg-emerald-100 border-emerald-400"
+                      : "bg-white border-gray-200 hover:bg-emerald-50"
+                  }
+                `}
+                disabled={mpShowAnswer || mpAnswered}
+                onClick={() => submitMpAnswer(idx)}
+              >
+                {answer}
+                {mpShowAnswer && idx === questions[current].correctAnswer && (
+                  <span className="ml-2 text-green-700 font-bold">(Correct)</span>
+                )}
+              </button>
+            ))}
           </div>
-        )}
-        {/* Leaderboard */}
-        {mpShowAnswer && (
-          <div className="mb-6">
-            <div className="font-bold mb-2">Leaderboard</div>
-            <ul className="list-decimal pl-6">
-              {mpLeaderboard.map((nick, i) => (
-                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {nick}: {mpScores[nick] || 0} pts
-                  {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                  {nick === nickname && " (You)"}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
-            onClick={() => setGameState("pre")}
-          >
-            Quit
-          </button>
-          {mpShowAnswer && !isLastQuestion && (
-            <button
-              className="px-4 py-2 bg-emerald-600 text-white rounded"
-              onClick={() => setCurrent((c) => c + 1)}
-            >
-              Next
-            </button>
+          {!mpShowAnswer && (
+            <div className="mb-4 text-center text-gray-600">
+              Waiting for all players to answer or time to run out...
+            </div>
           )}
-          {mpShowAnswer && isLastQuestion && (
+          {mpShowAnswer && (
+            <div className="mb-4 text-center text-green-700 font-semibold">
+              Correct answer shown!{" "}
+              {isLastQuestion ? "Quiz complete." : "Click Next to continue."}
+            </div>
+          )}
+          {/* Leaderboard */}
+          {mpShowAnswer && (
+            <div className="mb-6">
+              <div className="font-bold mb-2">Leaderboard</div>
+              <ul className="list-decimal pl-6">
+                {mpLeaderboard.map((nick, i) => (
+                  <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
+                    {nick}: {mpScores[nick] || 0} pts
+                    {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                    {nick === nickname && " (You)"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex justify-between">
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
               onClick={() => setGameState("pre")}
             >
-              Finish
+              Quit
             </button>
-          )}
+            {mpShowAnswer && !isLastQuestion && (
+              <button
+                className="px-4 py-2 bg-emerald-600 text-white rounded"
+                onClick={() => setCurrent((c) => c + 1)}
+              >
+                Next
+              </button>
+            )}
+            {mpShowAnswer && isLastQuestion && (
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => setGameState("pre")}
+              >
+                Finish
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    );
-  }
-
+      );
+    }
   return null;
-};
+}
 
 export default PlayQuiz;
