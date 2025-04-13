@@ -1,5 +1,6 @@
 import { Tag } from "lucide-react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
+import StarRating from "./StarRating";
 
 export default function QuizCard({
   quiz,
@@ -12,6 +13,8 @@ export default function QuizCard({
     image: string;
     popularity: number;
     language: string;
+    averageRating?: number;
+    ratingCount?: number;
   };
 }) {
   return (
@@ -35,6 +38,21 @@ export default function QuizCard({
       )}
       <div className="p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-lg text-gray-800 mb-1">{quiz.title}</h3>
+        
+        {/* Display star rating if available */}
+        {quiz.averageRating !== undefined && (
+          <div className="flex items-center gap-2 mb-1">
+            <StarRating
+              rating={quiz.averageRating}
+              size="sm"
+              className="flex-shrink-0"
+            />
+            <span className="text-xs text-gray-500">
+              {quiz.averageRating.toFixed(1)} ({quiz.ratingCount || 0} {quiz.ratingCount === 1 ? 'rating' : 'ratings'})
+            </span>
+          </div>
+        )}
+        
         <p className="text-gray-500 text-sm mb-2 line-clamp-2">{quiz.description}</p>
         <div className="flex flex-wrap gap-1 mb-2">
           {quiz.tags.map((tag) => (

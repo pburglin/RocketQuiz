@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Filter, Star, Globe, Tag } from "lucide-react";
+import { Search, Filter, Star, Globe, Tag, ThumbsUp } from "lucide-react";
 import QuizCard from "../components/QuizCard";
 import { db } from "../firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
@@ -32,6 +32,7 @@ export default function SearchQuiz() {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [popularity, setPopularity] = useState(0);
+  const [minRating, setMinRating] = useState(0);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,10 @@ export default function SearchQuiz() {
     const quizPopularity = typeof quiz.popularity === "number" ? quiz.popularity : 0;
     const matchesPopularity = quizPopularity >= popularity;
 
+    // If rating is not present, treat as 0
+    const quizRating = typeof quiz.averageRating === "number" ? quiz.averageRating : 0;
+    const matchesRating = quizRating >= minRating;
+
     let matchesGameLength = true;
     if (gameLength && typeof quiz.questionCount === "number") {
       if (gameLength === "quick") {
@@ -87,7 +92,7 @@ export default function SearchQuiz() {
     }
 
     return (
-      matchesSearch && matchesLanguage && matchesTags && matchesPopularity && matchesGameLength
+      matchesSearch && matchesLanguage && matchesTags && matchesPopularity && matchesGameLength && matchesRating
     );
   });
 
@@ -203,7 +208,7 @@ export default function SearchQuiz() {
           </div>
           {/* Popularity Slider */}
           <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[200px]">
-            <Star className="w-5 h-5 text-yellow-400 mr-2" />
+            <ThumbsUp className="w-5 h-5 text-blue-500 mr-2" />
             <input
               type="range"
               min={0}
@@ -213,6 +218,21 @@ export default function SearchQuiz() {
               className="w-full accent-indigo-500"
             />
             <span className="ml-2 text-sm text-gray-600">{popularity}+</span>
+          </div>
+          
+          {/* Rating Slider */}
+          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[200px]">
+            <Star className="w-5 h-5 text-yellow-400 mr-2" />
+            <input
+              type="range"
+              min={0}
+              max={5}
+              step={0.5}
+              value={minRating}
+              onChange={(e) => setMinRating(Number(e.target.value))}
+              className="w-full accent-indigo-500"
+            />
+            <span className="ml-2 text-sm text-gray-600">{minRating}+ ★</span>
           </div>
         </div>
         {/* Quiz List/Grid */}

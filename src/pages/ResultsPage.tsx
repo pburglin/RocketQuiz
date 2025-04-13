@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Leaderboard from "../components/Leaderboard";
 import { db } from "../firebaseClient";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 
 export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore session doc
@@ -59,6 +59,31 @@ export default function ResultsPage() {
   }, [id]);
 
 
+  const handleRateQuiz = async (rating: number) => {
+    if (!id || !quiz) return;
+    
+    try {
+      const quizRef = doc(db, "quizzes", id);
+      
+      // Update the quiz document with the new rating
+      await updateDoc(quizRef, {
+        // Add the rating to the ratings array
+        ratings: arrayUnion(rating),
+        // Increment the total ratings count
+        ratingCount: increment(1),
+        // Update the average rating
+        // We'll calculate this on the client side for now
+        // In a production app, you might want to use a Cloud Function for this
+        averageRating: ((quiz.averageRating || 0) * (quiz.ratingCount || 0) + rating) /
+                       ((quiz.ratingCount || 0) + 1)
+      });
+      
+      console.log(`Quiz rated: ${rating} stars`);
+    } catch (error) {
+      console.error("Error rating quiz:", error);
+    }
+  };
+
   return (
     <Leaderboard
       quiz={quiz}
@@ -70,6 +95,7 @@ export default function ResultsPage() {
       onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}
       onFindAnotherQuiz={() => navigate("/search")}
       showMedals={true}
+      onRateQuiz={handleRateQuiz}
     />
   );
 }

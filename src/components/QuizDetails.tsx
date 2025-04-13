@@ -1,5 +1,6 @@
 import React from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
+import StarRating from "./StarRating";
 
 export default function QuizDetails({
   quiz,
@@ -49,6 +50,19 @@ export default function QuizDetails({
         />
       )}
       <div className="mb-4 text-gray-600">{quiz.description}</div>
+      
+      {/* Display rating if available */}
+      {quiz.averageRating !== undefined && (
+        <div className="mb-4 flex items-center gap-2">
+          <StarRating
+            rating={quiz.averageRating}
+            size="md"
+          />
+          <span className="text-sm text-gray-600">
+            {quiz.averageRating.toFixed(1)} out of 5 ({quiz.ratingCount || 0} {quiz.ratingCount === 1 ? 'rating' : 'ratings'})
+          </span>
+        </div>
+      )}
       <div className="mb-2 flex flex-wrap gap-2">
         {quiz.tags?.map((tag: string) => (
           <span

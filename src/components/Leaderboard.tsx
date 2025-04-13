@@ -1,5 +1,5 @@
-import React from "react";
-
+import React, { useState } from "react";
+import StarRating from "./StarRating";
 export default function Leaderboard({
   quiz,
   isMultiplayer,
@@ -9,7 +9,9 @@ export default function Leaderboard({
   spScore,
   onPlayAgain,
   onFindAnotherQuiz,
+  onRateQuiz,
 }: any) {
+  const [userRating, setUserRating] = useState(0);
   console.log("[Leaderboard] Render", { quiz, isMultiplayer, mpLeaderboard, mpScores, nickname, spScore });
 
   return (
@@ -36,6 +38,29 @@ export default function Leaderboard({
           <div className="text-4xl text-blue-700 font-bold">{spScore}</div>
         </div>
       )}
+
+      <div className="mb-8">
+        <div className="font-bold mb-2 text-lg">Rate this Quiz</div>
+        <div className="flex flex-col items-center">
+          <StarRating
+            rating={userRating}
+            size="lg"
+            interactive={true}
+            onRatingChange={(rating) => {
+              setUserRating(rating);
+              if (onRateQuiz) {
+                onRateQuiz(rating);
+              }
+            }}
+            className="mb-2"
+          />
+          <div className="text-sm text-gray-500">
+            {userRating > 0
+              ? `You rated this quiz ${userRating} ${userRating === 1 ? 'star' : 'stars'}`
+              : "Click to rate this quiz"}
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-center gap-4">
         <button
