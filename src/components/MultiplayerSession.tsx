@@ -124,11 +124,6 @@ export default function MultiplayerSession({
                   <span className={a.nickname === nickname ? "font-bold text-emerald-700" : ""}>
                     {i + 1}. {a.nickname}
                   </span>
-                  {typeof a.answer === "number" && q.answers[a.answer] !== undefined && (
-                    <span className="ml-2 italic text-gray-500">
-                      ({q.answers[a.answer]})
-                    </span>
-                  )}
                   {a.nickname === nickname && " (You)"}
                 </li>
               ))}
