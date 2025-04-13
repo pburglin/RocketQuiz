@@ -10,7 +10,13 @@ export default function MultiplayerGamePage() {
   const [quiz, setQuiz] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [current, setCurrent] = useState(0);
-  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [isOrganizer, setIsOrganizer] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_isOrganizer");
+      if (stored) return stored === "true";
+    }
+    return false;
+  });
   const [mpShowAnswer, setMpShowAnswer] = useState(false);
   const [mpTimer, setMpTimer] = useState(0);
   const [mpAnswered, setMpAnswered] = useState(false);
@@ -21,7 +27,14 @@ export default function MultiplayerGamePage() {
   const [nextQuestionTimer, setNextQuestionTimer] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
-  const [nickname, setNickname] = useState<string>("");
+  const [nickname, setNickname] = useState<string>(() => {
+    // Try to get nickname from localStorage (set in lobby)
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_nickname");
+      if (stored) return stored;
+    }
+    return "";
+  });
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,6 +74,22 @@ export default function MultiplayerGamePage() {
     fetchQuiz();
   }, [id]);
 
+  // On mount, try to get isOrganizer from localStorage if not already set
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_isOrganizer");
+      if (stored) setIsOrganizer(stored === "true");
+    }
+  }, []);
+
+  // On mount, try to get nickname from localStorage if not already set
+  useEffect(() => {
+    if (!nickname && typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_nickname");
+      if (stored) setNickname(stored);
+    }
+  }, [nickname]);
+
   // Session logic: get sessionId from URL and determine organizer
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -68,6 +97,14 @@ export default function MultiplayerGamePage() {
     if (sid) setSessionId(sid);
     // Organizer if no "session" param in URL (copied from lobby logic)
     setIsOrganizer(!sid);
+  }, []);
+
+  // On mount, try to get isOrganizer from localStorage if not already set
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mp_isOrganizer");
+      if (stored) setIsOrganizer(stored === "true");
+    }
   }, []);
 
   // Listen for currentQuestion in session doc (sync all clients)
