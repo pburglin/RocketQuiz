@@ -136,7 +136,11 @@ export default function SinglePlayerPage() {
       setNextQuestionTimer={setNextQuestionTimer}
       timerRef={timerRef}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
-      onFinish={() => navigate(`/play/quiz/${id}/results`)}
+      onFinish={() => {
+        // Store the score in localStorage so ResultsPage can access it
+        localStorage.setItem('sp_score', spScore.toString());
+        navigate(`/play/quiz/${id}/results`);
+      }}
     />
   );
 }

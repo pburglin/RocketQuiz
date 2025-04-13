@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import StarRating from "./StarRating";
+
 export default function Leaderboard({
   quiz,
   isMultiplayer,
@@ -23,19 +24,35 @@ export default function Leaderboard({
         <>
           <div className="font-bold mb-2 text-lg">Final Leaderboard</div>
           <ul className="list-decimal pl-6 text-left mb-8">
-            {mpLeaderboard.map((nick: string, i: number) => (
-              <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
-                {nick}: {mpScores[nick] || 0} pts
-                {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                {nick === nickname && " (You)"}
-              </li>
-            ))}
+            {mpLeaderboard.map((nick: string, i: number) => {
+              const totalScore = mpScores[nick] || 0;
+              const baseScore = 1000 * Math.floor(totalScore / 1000); // Estimate base score (1000 per correct answer)
+              const speedBonus = totalScore - baseScore; // Estimate speed bonus
+              
+              return (
+                <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
+                  {nick}: {totalScore} pts 
+                  {totalScore > 0 && (
+                    <span className="text-sm text-gray-600 ml-1">
+                      ({Math.floor(totalScore / 1000)} correct × 1000 + {speedBonus} speed bonus)
+                    </span>
+                  )}
+                  {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                  {nick === nickname && " (You)"}
+                </li>
+              );
+            })}
           </ul>
         </>
       ) : (
         <div className="mb-8">
           <div className="font-bold mb-2 text-lg">Your Final Score</div>
           <div className="text-4xl text-blue-700 font-bold">{spScore}</div>
+          {spScore > 0 && (
+            <div className="text-sm text-gray-600 mt-2">
+              {Math.floor(spScore / 1000)} correct answers × 1000 + {spScore % 1000} speed bonus
+            </div>
+          )}
         </div>
       )}
 

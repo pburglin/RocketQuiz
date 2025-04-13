@@ -151,7 +151,7 @@ export default function SinglePlayerSession({
       )}
       {/* Show score after each question */}
       <div className="mb-4 text-center text-blue-700 font-bold">
-        Score: {spScore}
+        <div className="text-2xl">Score: {spScore}</div>
         {showAnswer && spSelected === q.correctAnswer && (
           <div className="text-sm text-gray-600">
             (Last answer: 1000 base + {Math.round(spScore % 1000)} speed bonus)
