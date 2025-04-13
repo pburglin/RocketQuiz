@@ -29,6 +29,7 @@ export default function MultiplayerSession({
   submitMpAnswer,
   onQuit,
   onFinish,
+  isOrganizer,
 }: any) {
   const q = questions.length > 0 ? questions[current] : null;
   const isLastQuestion = current === questions.length - 1;
@@ -158,23 +159,33 @@ export default function MultiplayerSession({
       )}
       <div className="flex justify-between">
         <button
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+          className={`px-4 py-2 rounded font-bold transition-colors ${
+            isOrganizer
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+          disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
           onClick={onQuit}
         >
           Quit
         </button>
         {mpShowAnswer && !isLastQuestion && (
           <button
-            className="px-4 py-2 bg-emerald-600 text-white rounded"
-            onClick={() => setCurrent(current + 1)}
+            className={`px-4 py-2 rounded font-bold transition-colors ${
+              isOrganizer
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
+            onClick={isOrganizer ? onFinish : undefined}
           >
-            Next {nextQuestionTimer !== null ? `(${nextQuestionTimer}s)` : ""}
+            Next{nextQuestionTimer !== null ? ` (${nextQuestionTimer})` : ""}
           </button>
         )}
         {mpShowAnswer && isLastQuestion && (
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded"
-            onClick={onFinish}
+            onClick={isOrganizer ? onFinish : undefined}
           >
             Finish
           </button>
