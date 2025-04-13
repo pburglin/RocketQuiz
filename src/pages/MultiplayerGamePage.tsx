@@ -306,12 +306,35 @@ export default function MultiplayerGamePage() {
             leaderboard = Object.entries(scores)
               .sort((a, b) => b[1] - a[1])
               .map(([nick]) => nick);
+              
+            console.log("Calculated final scores and leaderboard:", { scores, leaderboard });
+            
+            // Make sure we have at least some data
+            if (leaderboard.length === 0 && players.length > 0) {
+              console.log("No scores calculated but we have players. Creating default leaderboard.");
+              leaderboard = players;
+              players.forEach(player => {
+                if (!scores[player]) scores[player] = 0;
+              });
+            }
+            
             // Write to session doc
-            await setDoc(sessionRef, {
-              mpScores: scores,
-              mpLeaderboard: leaderboard,
-              gameFinished: true,
-            }, { merge: true });
+            try {
+              await setDoc(sessionRef, {
+                mpScores: scores,
+                mpLeaderboard: leaderboard,
+                gameFinished: true,
+              }, { merge: true });
+              console.log("Successfully saved final scores and leaderboard to Firestore");
+              
+              // Store in localStorage as backup
+              if (typeof window !== "undefined") {
+                localStorage.setItem("mp_scores", JSON.stringify(scores));
+                localStorage.setItem("mp_leaderboard", JSON.stringify(leaderboard));
+              }
+            } catch (error) {
+              console.error("Error saving final scores to Firestore:", error);
+            }
           }
         }
       }}

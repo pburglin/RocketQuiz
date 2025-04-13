@@ -9,10 +9,25 @@ export default function ResultsPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("session")) setSessionId(params.get("session"));
-    else if (typeof window !== "undefined") {
+    console.log("URL params:", params.toString());
+    
+    if (params.get("session")) {
+      const sid = params.get("session");
+      console.log("Found session ID in URL:", sid);
+      setSessionId(sid);
+      
+      // Also store it in localStorage as a backup
+      if (typeof window !== "undefined" && sid) {
+        localStorage.setItem("mp_sessionId", sid);
+      }
+    } else if (typeof window !== "undefined") {
       const stored = localStorage.getItem("mp_sessionId");
-      if (stored) setSessionId(stored);
+      if (stored) {
+        console.log("Using stored session ID from localStorage:", stored);
+        setSessionId(stored);
+      } else {
+        console.error("No session ID found in URL or localStorage");
+      }
     }
   }, []);
   const { id } = useParams<{ id: string }>();
@@ -38,7 +53,36 @@ export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
-      if (!sessionId) return;
+      // First check localStorage for backup data
+      let foundData = false;
+      if (typeof window !== "undefined") {
+        const storedScores = localStorage.getItem("mp_scores");
+        const storedLeaderboard = localStorage.getItem("mp_leaderboard");
+        
+        if (storedScores && storedLeaderboard) {
+          try {
+            const scores = JSON.parse(storedScores);
+            const leaderboard = JSON.parse(storedLeaderboard);
+            console.log("Found backup scores and leaderboard in localStorage:", { scores, leaderboard });
+            
+            setMpScores(scores);
+            setMpLeaderboard(leaderboard);
+            setIsMultiplayer(true);
+            foundData = true;
+          } catch (error) {
+            console.error("Error parsing backup data from localStorage:", error);
+          }
+        }
+      }
+      
+      // Then try to fetch from Firestore
+      if (!sessionId) {
+        if (!foundData) {
+          console.error("No sessionId and no backup data found");
+        }
+        return;
+      }
+      
       console.log("Fetching multiplayer results for session:", sessionId);
       
       const sessionRef = doc(db, "sessions", sessionId);
@@ -49,10 +93,16 @@ export default function ResultsPage() {
         console.log("Session data:", data);
         
         if (data.mpScores && data.mpLeaderboard) {
-          console.log("Found scores and leaderboard:", data.mpScores, data.mpLeaderboard);
+          console.log("Found scores and leaderboard in Firestore:", data.mpScores, data.mpLeaderboard);
           setMpScores(data.mpScores);
           setMpLeaderboard(data.mpLeaderboard);
           setIsMultiplayer(true);
+          
+          // Update localStorage with the latest data
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
+            localStorage.setItem("mp_leaderboard", JSON.stringify(data.mpLeaderboard));
+          }
         } else {
           console.error("Missing mpScores or mpLeaderboard in session data");
           
@@ -72,6 +122,12 @@ export default function ResultsPage() {
             try {
               await setDoc(sessionRef, { mpLeaderboard: leaderboard }, { merge: true });
               console.log("Updated session with leaderboard");
+              
+              // Update localStorage with the latest data
+              if (typeof window !== "undefined") {
+                localStorage.setItem("mp_scores", JSON.stringify(scores));
+                localStorage.setItem("mp_leaderboard", JSON.stringify(leaderboard));
+              }
             } catch (error) {
               console.error("Error updating session with leaderboard:", error);
             }
@@ -95,6 +151,12 @@ export default function ResultsPage() {
             setMpScores(data.mpScores);
             setMpLeaderboard(data.mpLeaderboard);
             setIsMultiplayer(true);
+            
+            // Update localStorage with the latest data
+            if (typeof window !== "undefined") {
+              localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
+              localStorage.setItem("mp_leaderboard", JSON.stringify(data.mpLeaderboard));
+            }
           }
         }
       });
@@ -140,11 +202,32 @@ export default function ResultsPage() {
     }
   };
 
+  // Add debug output
+  console.log("Rendering ResultsPage with:", {
+    sessionId,
+    isMultiplayer,
+    mpLeaderboard,
+    mpScores,
+    nickname,
+    spScore
+  });
+
+  // Create a fallback leaderboard if needed
+  const finalLeaderboard = mpLeaderboard.length > 0 ? mpLeaderboard :
+    Object.keys(mpScores).length > 0 ?
+      Object.entries(mpScores as Record<string, number>)
+        .sort((a, b) => b[1] - a[1])
+        .map(([nick]) => nick) :
+      [];
+
+  // Create a fallback for multiplayer detection
+  const finalIsMultiplayer = isMultiplayer || Object.keys(mpScores).length > 0 || sessionId !== null;
+
   return (
     <Leaderboard
       quiz={quiz}
-      isMultiplayer={isMultiplayer}
-      mpLeaderboard={mpLeaderboard}
+      isMultiplayer={finalIsMultiplayer}
+      mpLeaderboard={finalLeaderboard}
       mpScores={mpScores}
       nickname={nickname}
       spScore={spScore}
