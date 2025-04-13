@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerSession from "../components/MultiplayerSession";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export default function MultiplayerGamePage() {
   const { id } = useParams<{ id: string }>();
@@ -269,8 +269,19 @@ export default function MultiplayerGamePage() {
         } else {
           // Last question - finish the game
           // Fetch all answers for the session
+          console.log("Fetching answers for session:", sessionId);
+          
+          // The structure of answers in Firestore is:
+          // sessions/{sessionId}/answers/{nickname}
+          // with fields: qIdx, answer, answeredAt
           const answersSnap = await getDocs(collection(db, "sessions", sessionId, "answers"));
-          const allAnswers = answersSnap.docs.map((doc) => ({ nickname: doc.id, ...(doc.data() as any) }));
+          const allAnswers = answersSnap.docs.map((doc) => ({
+            nickname: doc.id,
+            ...(doc.data() as any)
+          }));
+          
+          console.log("Retrieved answers:", allAnswers);
+          
           // Fetch session for questionStart times
           const sessionRef = doc(db, "sessions", sessionId);
           const sessionSnap = await getDoc(sessionRef);
@@ -286,23 +297,55 @@ export default function MultiplayerGamePage() {
               });
             }
             // Calculate scores
+            console.log("Calculating scores for questions:", questions);
+            
+            // Initialize scores for all players
+            players.forEach(player => {
+              scores[player] = 0;
+            });
+            
+            // Process each answer
             allAnswers.forEach((a) => {
-              if (typeof a.qIdx === "number" && typeof a.answer === "number" && typeof a.answeredAt?.toMillis === "function") {
+              console.log("Processing answer:", a);
+              
+              // For each question the player answered
+              if (typeof a.qIdx === "number" && typeof a.answer === "number") {
                 const qIdx = a.qIdx;
                 const q = questions[qIdx];
-                if (q && a.answer === q.correctAnswer && questionsStart[qIdx]) {
-                  const answeredAt = a.answeredAt.toMillis();
-                  const timeTaken = Math.max(0, (answeredAt - questionsStart[qIdx]) / 1000);
-                  const maxTime = q.time || 30;
-                  // Enhanced speed bonus calculation - more weight on speed
-                  const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
-                  // Exponential scoring to reward faster answers more significantly
-                  const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
-                  const points = 1000 + speedBonus;
+                
+                console.log(`Question ${qIdx}:`, q);
+                console.log(`Player answer: ${a.answer}, Correct answer: ${q?.correctAnswer}`);
+                
+                // Award points for correct answers
+                if (q && a.answer === q.correctAnswer) {
+                  // Base points for correct answer
+                  let points = 1000;
+                  
+                  // Add speed bonus if timing data is available
+                  if (typeof a.answeredAt?.toMillis === "function" && questionsStart[qIdx]) {
+                    const answeredAt = a.answeredAt.toMillis();
+                    const timeTaken = Math.max(0, (answeredAt - questionsStart[qIdx]) / 1000);
+                    const maxTime = q.time || 30;
+                    
+                    // Enhanced speed bonus calculation - more weight on speed
+                    const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+                    // Exponential scoring to reward faster answers more significantly
+                    const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
+                    points += speedBonus;
+                    
+                    console.log(`Awarded ${points} points (1000 base + ${speedBonus} speed bonus) to ${a.nickname}`);
+                  } else {
+                    console.log(`Awarded ${points} points (no speed bonus) to ${a.nickname}`);
+                  }
+                  
                   scores[a.nickname] = (scores[a.nickname] || 0) + points;
+                } else {
+                  console.log(`No points awarded to ${a.nickname} for question ${qIdx}`);
                 }
               }
             });
+            
+            console.log("Final calculated scores:", scores);
             leaderboard = Object.entries(scores)
               .sort((a, b) => b[1] - a[1])
               .map(([nick]) => nick);
@@ -372,14 +415,37 @@ export default function MultiplayerGamePage() {
         setMpSelected(idx);
         setMpAnswered(true);
         try {
+          // Get the current question
+          const q = questions[current];
+          const isCorrect = q && idx === q.correctAnswer;
+          
           // Write answer to Firestore
           const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
           await setDoc(answerRef, {
             qIdx: current,
             answer: idx,
             answeredAt: serverTimestamp(),
+            isCorrect: isCorrect
           });
-          console.log("Answer written to Firestore", { sessionId, nickname, idx, current });
+          
+          console.log("Answer written to Firestore", {
+            sessionId,
+            nickname,
+            idx,
+            current,
+            isCorrect,
+            correctAnswer: q?.correctAnswer
+          });
+          
+          // Update running score in session document
+          if (isCorrect) {
+            // We'll calculate the actual score when all questions are answered
+            // This is just to keep track of correct answers
+            const sessionRef = doc(db, "sessions", sessionId);
+            await updateDoc(sessionRef, {
+              [`playerCorrectAnswers.${nickname}.${current}`]: true
+            });
+          }
         } catch (err) {
           console.error("Error writing answer to Firestore", err);
         }
