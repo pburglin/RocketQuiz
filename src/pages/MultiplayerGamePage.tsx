@@ -10,6 +10,7 @@ export default function MultiplayerGamePage() {
   const [quiz, setQuiz] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [current, setCurrent] = useState(0);
+  const [isOrganizer, setIsOrganizer] = useState(false);
   const [mpShowAnswer, setMpShowAnswer] = useState(false);
   const [mpTimer, setMpTimer] = useState(0);
   const [mpAnswered, setMpAnswered] = useState(false);
@@ -51,16 +52,39 @@ export default function MultiplayerGamePage() {
       }
       setQuestions(questionsArr);
       setMpTimer(questionsArr[0]?.time || 30);
+      // Organizer initializes currentQuestion in Firestore
+      if (questionsArr.length > 0 && sessionId && isOrganizer) {
+        const sessionRef = doc(db, "sessions", sessionId);
+        setDoc(sessionRef, { currentQuestion: 0 }, { merge: true });
+      }
     }
     fetchQuiz();
   }, [id]);
 
-  // Session logic: get sessionId from URL
+  // Session logic: get sessionId from URL and determine organizer
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("session");
     if (sid) setSessionId(sid);
+    // Organizer if no "session" param in URL (copied from lobby logic)
+    setIsOrganizer(!sid);
   }, []);
+
+  // Listen for currentQuestion in session doc (sync all clients)
+  useEffect(() => {
+    if (!sessionId) return;
+    const sessionRef = doc(db, "sessions", sessionId);
+    const unsub = onSnapshot(sessionRef, (snap) => {
+      if (snap.exists() && typeof snap.data().currentQuestion === "number") {
+        setCurrent(snap.data().currentQuestion);
+        setMpAnswered(false);
+        setMpSelected(null);
+        setMpShowAnswer(false);
+        setNextQuestionTimer(null);
+      }
+    });
+    return () => unsub();
+  }, [sessionId]);
 
   // Listen for players
   useEffect(() => {
@@ -96,20 +120,19 @@ export default function MultiplayerGamePage() {
     };
   }, [current, questions]);
 
- // Next question countdown logic
+ // Next question countdown logic (organizer controls progression)
  useEffect(() => {
    if (!mpShowAnswer || nextQuestionTimer === null) return;
    if (nextQuestionTimer <= 0) {
-     // Move to next question or finish
-     if (current < questions.length - 1) {
-       setCurrent(current + 1);
-       setMpAnswered(false);
-       setMpSelected(null);
-       setMpShowAnswer(false);
-       setNextQuestionTimer(null);
-     } else {
-       // Quiz finished, navigate to results or show final leaderboard
-       navigate(`/play/quiz/${id}/results`);
+     // Only organizer advances the question in Firestore
+     if (isOrganizer && sessionId) {
+       if (current < questions.length - 1) {
+         const sessionRef = doc(db, "sessions", sessionId);
+         setDoc(sessionRef, { currentQuestion: current + 1 }, { merge: true });
+       } else {
+         // Quiz finished, navigate to results or show final leaderboard
+         navigate(`/play/quiz/${id}/results`);
+       }
      }
      return;
    }
@@ -117,7 +140,7 @@ export default function MultiplayerGamePage() {
      setNextQuestionTimer((t) => (t !== null ? t - 1 : null));
    }, 1000);
    return () => clearTimeout(timer);
- }, [nextQuestionTimer, mpShowAnswer]);
+ }, [nextQuestionTimer, mpShowAnswer, isOrganizer, sessionId, current, questions.length, id, navigate]);
 
   // Listen for answers for the current question
   useEffect(() => {
