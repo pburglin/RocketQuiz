@@ -33,7 +33,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
 
   // "pre" = quiz details, "single" = single player, "multi-lobby" = multiplayer lobby, "multi-playing" = multiplayer game
-  const [gameState, setGameState] = useState<"pre" | "single" | "multi-lobby" | "multi-playing">("pre");
+  const [gameState, setGameState] = useState<"pre" | "single" | "multi-lobby" | "multi-playing" | "results">("pre");
   const [current, setCurrent] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [timer, setTimer] = useState<number>(0);
@@ -246,7 +246,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
             setMpSelected(null);
             setMpAllAnswers([]);
           } else {
-            setGameState("pre"); // Or show final results
+            setGameState("results"); // Show final results
           }
           return null;
         }
@@ -521,7 +521,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           {showAnswer && current === questions.length - 1 && (
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={() => setGameState("pre")}
+              onClick={() => setGameState("results")}
             >
               Finish
             </button>
@@ -864,7 +864,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           {mpShowAnswer && isLastQuestion && (
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded"
-              onClick={() => setGameState("pre")}
+              onClick={() => setGameState("results")}
             >
               Finish
             </button>
@@ -874,6 +874,65 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     );
   }
   return null;
+}
+
+// FINAL RESULTS SCREEN
+if (gameState === "results") {
+  const isMultiplayer = sessionId !== null; // Check if it was a multiplayer game
+  return (
+    <div className="max-w-2xl mx-auto p-4 text-center">
+      <h1 className="text-3xl font-bold mb-4">Quiz Complete!</h1>
+      <h2 className="text-xl font-semibold mb-6">{quiz.title}</h2>
+
+      {isMultiplayer ? (
+        <>
+          <div className="font-bold mb-2 text-lg">Final Leaderboard</div>
+          <ul className="list-decimal pl-6 text-left mb-8">
+            {mpLeaderboard.map((nick, i) => (
+              <li key={nick} className={nick === nickname ? "font-bold text-emerald-700" : ""}>
+                {nick}: {mpScores[nick] || 0} pts
+                {i === 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
+                {nick === nickname && " (You)"}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="mb-8">
+          <div className="font-bold mb-2 text-lg">Your Final Score</div>
+          <div className="text-4xl text-blue-700 font-bold">{spScore}</div>
+        </div>
+      )}
+
+      <div className="flex justify-center gap-4">
+        <button
+          className="px-6 py-2 bg-emerald-600 text-white rounded font-bold"
+          onClick={() => {
+            // Reset state for replay
+            setCurrent(0);
+            setShowAnswer(false);
+            setSpScore(0);
+            setSpSelected(null);
+            setMpScores({});
+            setMpLeaderboard([]);
+            setNextQuestionTimer(null);
+            setGameState("pre");
+          }}
+        >
+          Play Again
+        </button>
+        <button
+          className="px-6 py-2 bg-gray-600 text-white rounded font-bold"
+          onClick={() => navigate("/search")}
+        >
+          Find Another Quiz
+        </button>
+      </div>
+    </div>
+  );
+}
+
+return null;
 }
 
 export default PlayQuiz;
