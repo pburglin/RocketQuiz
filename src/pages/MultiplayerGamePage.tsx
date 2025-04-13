@@ -182,7 +182,7 @@ export default function MultiplayerGamePage() {
      return;
    }
    const timer = setTimeout(() => {
-     setNextQuestionTimer((t) => (t !== null ? t - 1 : null));
+     setNextQuestionTimer((t) => (t !== null ? Math.max(0, t - 1) : null));
    }, 1000);
    return () => clearTimeout(timer);
  }, [nextQuestionTimer, mpShowAnswer, isOrganizer, sessionId, current, questions.length, id, navigate]);

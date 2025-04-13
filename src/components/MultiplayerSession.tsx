@@ -177,19 +177,24 @@ export default function MultiplayerSession({
         {mpShowAnswer && !isLastQuestion && (
           <button
             className={`px-4 py-2 rounded font-bold transition-colors ${
-              isOrganizer
+              isOrganizer && nextQuestionTimer === 0
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
             disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
-            onClick={isOrganizer ? onFinish : undefined}
+            onClick={isOrganizer && nextQuestionTimer === 0 ? onFinish : undefined}
           >
             Next{nextQuestionTimer !== null ? ` (${nextQuestionTimer})` : ""}
           </button>
         )}
         {mpShowAnswer && isLastQuestion && (
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className={`px-4 py-2 rounded font-bold transition-colors ${
+              isOrganizer
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            disabled={!isOrganizer}
             onClick={isOrganizer ? onFinish : undefined}
           >
             Finish
