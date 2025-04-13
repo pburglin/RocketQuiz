@@ -1,5 +1,6 @@
 import React from "react";
 import QRCode from "react-qr-code";
+import { useState, useEffect } from "react";
 
 export default function MultiplayerLobby({
   quiz,
@@ -20,6 +21,15 @@ export default function MultiplayerLobby({
   setGameState,
   onBackToQuizDetails,
 }: any) {
+  // State for "Copied" tooltip
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => setCopied(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
   if (!quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
@@ -44,7 +54,7 @@ export default function MultiplayerLobby({
         <>
           <div className="mb-4">
             <div className="font-semibold">Session URL:</div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative">
               <input
                 className="w-full px-2 py-1 border rounded"
                 value={sessionUrl}
@@ -55,10 +65,16 @@ export default function MultiplayerLobby({
                 className="px-2 py-1 bg-gray-200 rounded"
                 onClick={() => {
                   navigator.clipboard.writeText(sessionUrl);
+                  setCopied(true);
                 }}
               >
                 Copy
               </button>
+              {copied && (
+                <span className="absolute right-0 top-[-1.5rem] bg-black text-white text-xs rounded px-2 py-1 z-10">
+                  Copied
+                </span>
+              )}
             </div>
           </div>
           <div className="mb-4 flex flex-col items-center">
@@ -67,33 +83,39 @@ export default function MultiplayerLobby({
           </div>
           <div className="mb-4">
             <div className="font-semibold mb-1">Enter your nickname to join:</div>
-            <input
-              className="px-2 py-1 border rounded w-full"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              maxLength={20}
-              disabled={players.includes(nickname)}
-            />
-            <button
-              className="mt-2 px-4 py-1 bg-emerald-600 text-white rounded"
-              disabled={
-                !nickname ||
-                players.includes(nickname) ||
-                nickname.trim().length < 2
-              }
-              onClick={async () => {
-                if (!nickname || players.includes(nickname)) {
-                  setNicknameError("Nickname must be unique and at least 2 characters.");
-                  return;
+            <div className="flex items-center gap-2">
+              <input
+                className="px-2 py-1 border rounded w-full"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                maxLength={20}
+                disabled={players.includes(nickname)}
+              />
+              <button
+                className={`px-4 py-1 rounded transition-colors ${
+                  players.includes(nickname)
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                }`}
+                disabled={
+                  !nickname ||
+                  players.includes(nickname) ||
+                  nickname.trim().length < 2
                 }
-                setNicknameError(null);
-                // Firestore logic to add player
-                // (This logic should be in PlayQuiz, but for demo, we call setPlayers here)
-                setPlayers((prev: string[]) => [...prev, nickname]);
-              }}
-            >
-              Join
-            </button>
+                onClick={async () => {
+                  if (!nickname || players.includes(nickname)) {
+                    setNicknameError("Nickname must be unique and at least 2 characters.");
+                    return;
+                  }
+                  setNicknameError(null);
+                  // Firestore logic to add player
+                  // (This logic should be in PlayQuiz, but for demo, we call setPlayers here)
+                  setPlayers((prev: string[]) => [...prev, nickname]);
+                }}
+              >
+                Join
+              </button>
+            </div>
             {nicknameError && (
               <div className="text-red-600 text-sm mt-1">{nicknameError}</div>
             )}
