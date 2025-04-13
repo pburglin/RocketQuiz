@@ -17,13 +17,13 @@ export default function Navbar({ user }: { user?: { name: string } }) {
             className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
           >
             <Search className="w-5 h-5" />
-            <span className="hidden sm:inline">Browse Quizzes</span>
+            <span className="hidden sm:inline">Browse</span>
           </Link>
           <Link
             to="/create-quiz"
             className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
           >
-            <span className="hidden sm:inline">Create Quiz</span>
+            <span className="hidden sm:inline">Create</span>
           </Link>
           {user ? (
             <div className="flex items-center gap-2">

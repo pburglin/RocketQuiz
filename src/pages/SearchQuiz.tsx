@@ -15,6 +15,9 @@ const allTags = [
   "Music",
   "Sports",
   "Technology",
+  "1stgrade",
+  "2ndgrade",
+  "3rdgrade",
 ];
 
 const languages = [
