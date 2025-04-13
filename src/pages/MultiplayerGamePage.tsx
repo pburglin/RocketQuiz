@@ -173,7 +173,7 @@ export default function MultiplayerGamePage() {
      if (isOrganizer && sessionId) {
        if (current < questions.length - 1) {
          const sessionRef = doc(db, "sessions", sessionId);
-         setDoc(sessionRef, { currentQuestion: current + 1 }, { merge: true });
+         setDoc(sessionRef, { currentQuestion: current + 1, questionStart: serverTimestamp() }, { merge: true });
        } else {
          // Quiz finished, navigate to results or show final leaderboard
          navigate(`/play/quiz/${id}/results`);
@@ -212,20 +212,39 @@ export default function MultiplayerGamePage() {
   // Calculate scores and leaderboard when answers are shown
   useEffect(() => {
     if (!mpShowAnswer || !questions.length) return;
-    // Calculate scores for this question
+    // Calculate scores for this question, including speed bonus
     const q = questions[current];
     const newScores = { ...mpScores };
-    mpAllAnswers.forEach((a) => {
-      if (a.answer === q.correctAnswer) {
-        newScores[a.nickname] = (newScores[a.nickname] || 0) + 1;
+
+    // Fetch questionStart from session doc
+    async function calcScores() {
+      let questionStart: number | null = null;
+      if (sessionId) {
+        const sessionRef = doc(db, "sessions", sessionId);
+        const sessionSnap = await getDoc(sessionRef);
+        if (sessionSnap.exists() && sessionSnap.data().questionStart?.toMillis) {
+          questionStart = sessionSnap.data().questionStart.toMillis();
+        }
       }
-    });
-    setMpScores(newScores);
-    // Update leaderboard
-    const sorted = Object.entries(newScores)
-      .sort((a, b) => b[1] - a[1])
-      .map(([nick]) => nick);
-    setMpLeaderboard(sorted);
+      mpAllAnswers.forEach((a) => {
+        if (a.answer === q.correctAnswer && typeof a.answeredAt?.toMillis === "function" && questionStart) {
+          const answeredAt = a.answeredAt.toMillis();
+          const timeTaken = Math.max(0, (answeredAt - questionStart) / 1000); // in seconds
+          // Scoring: 1000 base + up to 1000 bonus (faster = more bonus, slower = less)
+          const maxTime = q.time || 30;
+          const speedBonus = Math.max(0, Math.round(1000 * (1 - timeTaken / maxTime)));
+          const points = 1000 + speedBonus;
+          newScores[a.nickname] = (newScores[a.nickname] || 0) + points;
+        }
+      });
+      setMpScores(newScores);
+      // Update leaderboard
+      const sorted = Object.entries(newScores)
+        .sort((a, b) => b[1] - a[1])
+        .map(([nick]) => nick);
+      setMpLeaderboard(sorted);
+    }
+    calcScores();
   }, [mpShowAnswer]);
 
   if (!quiz) {

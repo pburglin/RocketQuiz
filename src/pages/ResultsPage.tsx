@@ -14,6 +14,35 @@ export default function ResultsPage() {
   const [spScore, setSpScore] = useState<number>(0);
   const [nickname, setNickname] = useState<string>("");
   const [isMultiplayer, setIsMultiplayer] = useState<boolean>(false);
+  // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
+  useEffect(() => {
+    async function fetchMultiplayerResults() {
+      // Try to get sessionId from URL or localStorage
+      let sessionId = null;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("session")) sessionId = params.get("session");
+      if (!sessionId && typeof window !== "undefined") {
+        sessionId = localStorage.getItem("mp_sessionId");
+      }
+      if (!sessionId) return;
+      // Fetch all answers
+      const answersSnap = await getDoc(doc(db, "sessions", sessionId));
+      let leaderboard: string[] = [];
+      let scores: { [nickname: string]: number } = {};
+      if (answersSnap.exists()) {
+        scores = answersSnap.data().mpScores || {};
+        leaderboard = Object.entries(scores)
+          .sort((a, b) => b[1] - a[1])
+          .map(([nick]) => nick);
+        setMpScores(scores);
+        setMpLeaderboard(leaderboard);
+        setIsMultiplayer(true);
+      }
+    }
+    if (!location.state || !location.state.mpLeaderboard) {
+      fetchMultiplayerResults();
+    }
+  }, [location.state]);
 
   useEffect(() => {
     async function fetchQuiz() {
@@ -47,6 +76,7 @@ export default function ResultsPage() {
       spScore={spScore}
       onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}
       onFindAnotherQuiz={() => navigate("/search")}
+      showMedals={true}
     />
   );
 }
