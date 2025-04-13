@@ -1,6 +1,8 @@
 import React from "react";
 import QRCode from "react-qr-code";
 import { useState, useEffect } from "react";
+import { db } from "../firebaseClient";
+import { doc, setDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
 
 export default function MultiplayerLobby({
   quiz,
@@ -20,6 +22,7 @@ export default function MultiplayerLobby({
   setIsOrganizer,
   setGameState,
   onBackToQuizDetails,
+  onStartGame,
 }: any) {
   // State for "Copied" tooltip
   const [copied, setCopied] = useState(false);
@@ -108,9 +111,18 @@ export default function MultiplayerLobby({
                     return;
                   }
                   setNicknameError(null);
-                  // Firestore logic to add player
-                  // (This logic should be in PlayQuiz, but for demo, we call setPlayers here)
-                  setPlayers((prev: string[]) => [...prev, nickname]);
+                  if (sessionId && nickname.trim().length >= 2) {
+                    try {
+                      await setDoc(
+                        doc(db, "sessions", sessionId, "players", nickname),
+                        { joinedAt: serverTimestamp() },
+                        { merge: true }
+                      );
+                      setPlayers((prev: string[]) => [...prev, nickname]);
+                    } catch (err) {
+                      setNicknameError("Failed to join lobby. Please try again.");
+                    }
+                  }
                 }}
               >
                 Join
@@ -133,7 +145,9 @@ export default function MultiplayerLobby({
                       className="ml-2 px-2 py-0.5 bg-red-500 text-white rounded text-xs"
                       onClick={async () => {
                         // Firestore logic to remove player
-                        setPlayers((prev: string[]) => prev.filter((x) => x !== p));
+                        if (sessionId && p) {
+                          await deleteDoc(doc(db, "sessions", sessionId, "players", p));
+                        }
                       }}
                     >
                       Remove
@@ -147,7 +161,7 @@ export default function MultiplayerLobby({
             <button
               className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
               disabled={players.length < 2}
-              onClick={() => setGameState("multi-playing")}
+              onClick={onStartGame}
             >
               Start Game
             </button>
