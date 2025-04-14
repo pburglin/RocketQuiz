@@ -206,6 +206,22 @@ export default function ResultsPage() {
   // Don't override the isMultiplayer state based on localStorage data
   // This ensures we use the correct game mode based on the current session
   
+  if (
+    !quiz ||
+    (isMultiplayer && (
+      !mpScores ||
+      Object.keys(mpScores).length === 0 ||
+      !finalLeaderboard ||
+      finalLeaderboard.length === 0
+    ))
+  ) {
+    return (
+      <div className="max-w-2xl mx-auto p-8 text-center">
+        <div className="text-lg text-gray-700">Loading final results...</div>
+      </div>
+    );
+  }
+
   return (
     <Leaderboard
       quiz={quiz}
