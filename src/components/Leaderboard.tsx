@@ -34,7 +34,7 @@ export default function Leaderboard({
           <ul className="list-decimal pl-6 text-left mb-8">
             {mpLeaderboard
               .map((nick: string) => {
-                // mpScores already contains the total accumulated score for each player
+                // mpScores contains the total accumulated score for each player from all questions
                 const totalScore = mpScores[nick] || 0;
                 // Estimate the number of correct answers based on the total score
                 // This is an approximation since we don't have the exact breakdown
