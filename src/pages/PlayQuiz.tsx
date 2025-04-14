@@ -632,9 +632,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     mpAllAnswers.forEach((ans) => {
       if (ans.answer === correctIdx) {
         // Base points + speed bonus
-        const base = 100;
+        const base = 1000;
         const speed = Math.max(0, questions[current].time - ans.time);
-        const bonus = Math.floor((speed / questions[current].time) * 100);
+        const speedFactor = Math.max(0, 1 - (ans.time / questions[current].time));
+        const bonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
         newScores[ans.nickname] = (newScores[ans.nickname] || 0) + base + bonus;
       }
     });
