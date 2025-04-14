@@ -76,6 +76,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [mpAnswered, setMpAnswered] = useState(false);
   const [mpAllAnswers, setMpAllAnswers] = useState<any[]>([]);
   const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
+  const mpScoresRef = useRef<{ [nickname: string]: number }>({});
   const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
   const [mpSelected, setMpSelected] = useState<number | null>(null);
 
@@ -370,6 +371,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           // Reset multiplayer state
           setSessionId(null);
           setMpScores({});
+          mpScoresRef.current = {};
           setMpLeaderboard([]);
           // Set game state to single player
           setGameState("single");
@@ -628,7 +630,11 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     if (!mpShowAnswer || !questions[current]) return;
     // Calculate scores
     const correctIdx = questions[current].correctAnswer;
-    let newScores = { ...mpScores };
+    // Use ref to persist cumulative scores across questions
+    if (current === 0 && Object.keys(mpScoresRef.current).length === 0) {
+      // On first question, initialize from mpScores (in case of reload)
+      mpScoresRef.current = { ...mpScores };
+    }
     mpAllAnswers.forEach((ans) => {
       if (ans.answer === correctIdx) {
         // Base points + speed bonus
@@ -636,13 +642,13 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         const speed = Math.max(0, questions[current].time - ans.time);
         const speedFactor = Math.max(0, 1 - (ans.time / questions[current].time));
         const bonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
-        newScores[ans.nickname] = (newScores[ans.nickname] || 0) + base + bonus;
+        mpScoresRef.current[ans.nickname] = (mpScoresRef.current[ans.nickname] || 0) + base + bonus;
       }
     });
-    setMpScores(newScores);
+    setMpScores({ ...mpScoresRef.current });
     // Sort leaderboard
-    const sorted = Object.entries(newScores)
-      .sort((a, b) => b[1] - a[1])
+    const sorted = Object.entries(mpScoresRef.current)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
       .map(([nick]) => nick);
     setMpLeaderboard(sorted);
     // eslint-disable-next-line
@@ -740,6 +746,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           setSpSelected(null);
           setSpCorrectAnswers(0);
           setMpScores({});
+          mpScoresRef.current = {};
           setMpLeaderboard([]);
           setNextQuestionTimer(null);
           
