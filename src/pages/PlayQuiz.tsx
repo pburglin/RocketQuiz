@@ -361,6 +361,17 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         setQuestionsCollapsed={setQuestionsCollapsed}
         onStartSinglePlayer={() => {
           console.log("[PlayQuiz] onStartSinglePlayer");
+          // Clear any previous multiplayer data from localStorage when starting a single player game
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("mp_scores");
+            localStorage.removeItem("mp_leaderboard");
+            localStorage.removeItem("mp_sessionId");
+          }
+          // Reset multiplayer state
+          setSessionId(null);
+          setMpScores({});
+          setMpLeaderboard([]);
+          // Set game state to single player
           setGameState("single");
         }}
         onStartMultiplayer={() => {
@@ -404,6 +415,10 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         onQuit={() => setGameState("pre")}
         onFinish={() => {
           console.log("[PlayQuiz] onFinish triggered (from SinglePlayerSession)");
+          // Store the final score in localStorage before navigating to results
+          if (typeof window !== "undefined") {
+            localStorage.setItem("sp_score", String(spScore));
+          }
           setQuizFinished(true); // Set flag instead of direct state change
         }}
       />
@@ -678,6 +693,12 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         }}
         onFinish={() => {
           console.log("[PlayQuiz] onFinish (multi-playing)");
+          // Store the multiplayer scores and leaderboard in localStorage before navigating to results
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mp_scores", JSON.stringify(mpScores));
+            localStorage.setItem("mp_leaderboard", JSON.stringify(mpLeaderboard));
+            localStorage.setItem("mp_sessionId", sessionId || "");
+          }
           setQuizFinished(true); // Set flag instead of direct state change
         }}
       />
@@ -685,7 +706,22 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   }
   // FINAL RESULTS SCREEN
   if (gameState === "results") {
+    // Determine if this was a multiplayer game based on the current session
     const isMultiplayer = sessionId !== null;
+    
+    // Store the current game's score in localStorage
+    if (typeof window !== "undefined") {
+      // For single player, store the score
+      if (!isMultiplayer) {
+        localStorage.setItem("sp_score", String(spScore));
+      }
+      // For multiplayer, store the scores and leaderboard
+      else {
+        localStorage.setItem("mp_scores", JSON.stringify(mpScores));
+        localStorage.setItem("mp_leaderboard", JSON.stringify(mpLeaderboard));
+      }
+    }
+    
     return (
       <MemoizedLeaderboard
         key={`results-${Date.now()}`}
@@ -696,13 +732,36 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         nickname={nickname}
         spScore={spScore}
         onPlayAgain={() => {
+          // Reset all game state
           setCurrent(0);
           setShowAnswer(false);
           setSpScore(0);
           setSpSelected(null);
+          setSpCorrectAnswers(0);
           setMpScores({});
           setMpLeaderboard([]);
           setNextQuestionTimer(null);
+          
+          // Clear localStorage data to prevent it from affecting the next game
+          if (typeof window !== "undefined") {
+            if (!isMultiplayer) {
+              // Clear single player data
+              localStorage.removeItem("sp_score");
+              localStorage.removeItem("sp_correctAnswers");
+            } else {
+              // Clear multiplayer data
+              localStorage.removeItem("mp_scores");
+              localStorage.removeItem("mp_leaderboard");
+              localStorage.removeItem("mp_sessionId");
+            }
+          }
+          
+          // Reset session ID if this was a multiplayer game
+          if (isMultiplayer) {
+            setSessionId(null);
+          }
+          
+          // Return to quiz details screen
           setGameState("pre");
         }}
         onFindAnotherQuiz={() => navigate("/search")}

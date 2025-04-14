@@ -49,7 +49,14 @@ export default function ResultsPage() {
     }
     return "";
   });
-  const [isMultiplayer, setIsMultiplayer] = useState<boolean>(false);
+  const [isMultiplayer, setIsMultiplayer] = useState<boolean>(() => {
+    // Check URL parameters first - if there's a session parameter, it's definitely multiplayer
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session")) {
+      return true;
+    }
+    return false;
+  });
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
@@ -212,25 +219,26 @@ export default function ResultsPage() {
     spScore
   });
 
-  // Create a fallback leaderboard if needed
-  const finalLeaderboard = mpLeaderboard.length > 0 ? mpLeaderboard :
-    Object.keys(mpScores).length > 0 ?
-      Object.entries(mpScores as Record<string, number>)
-        // Sort by top score (highest first)
-        // Note: Currently we only have access to total scores, not individual question scores
-        .sort((a, b) => b[1] - a[1])
-        .map(([nick]) => nick) :
-      [];
+  // Create a fallback leaderboard if needed, but only if this is actually a multiplayer game
+  const finalLeaderboard = isMultiplayer ?
+    (mpLeaderboard.length > 0 ? mpLeaderboard :
+      Object.keys(mpScores).length > 0 ?
+        Object.entries(mpScores as Record<string, number>)
+          // Sort by top score (highest first)
+          .sort((a, b) => b[1] - a[1])
+          .map(([nick]) => nick) :
+        []) :
+    [];
 
-  // Create a fallback for multiplayer detection
-  const finalIsMultiplayer = isMultiplayer || Object.keys(mpScores).length > 0 || sessionId !== null;
-
+  // Don't override the isMultiplayer state based on localStorage data
+  // This ensures we use the correct game mode based on the current session
+  
   return (
     <Leaderboard
       quiz={quiz}
-      isMultiplayer={finalIsMultiplayer}
+      isMultiplayer={isMultiplayer}
       mpLeaderboard={finalLeaderboard}
-      mpScores={mpScores}
+      mpScores={isMultiplayer ? mpScores : {}}
       nickname={nickname}
       spScore={spScore}
       onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}

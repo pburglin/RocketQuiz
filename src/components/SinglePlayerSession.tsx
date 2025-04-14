@@ -48,6 +48,17 @@ export default function SinglePlayerSession({
 }) {
   console.log("[SinglePlayerSession] Render, current:", current, "showAnswer:", showAnswer);
 
+  // Reset correctAnswers when starting a new game (when current is 0 and not showing answer)
+  React.useEffect(() => {
+    if (current === 0 && !showAnswer) {
+      // Reset the correct answers count at the start of a new game
+      setSpCorrectAnswers(0);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sp_correctAnswers", "0");
+      }
+    }
+  }, [current, showAnswer, setSpCorrectAnswers]);
+
   const q = questions.length > 0 ? questions[current] : null;
 
   // Single player: handle answer click
