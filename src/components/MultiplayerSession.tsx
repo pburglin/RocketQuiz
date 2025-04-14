@@ -1,5 +1,6 @@
 import React from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
+import { UserAvatar } from "./index";
 
 export default function MultiplayerSession({
   quiz,
@@ -63,21 +64,21 @@ export default function MultiplayerSession({
       <div className="mt-6 mb-2 text-lg font-semibold">
         Question {current + 1} of {questions.length}
       </div>
-      <div className="mb-2 font-bold">{q.question}</div>
       {q.image && q.image.trim() !== "" ? (
         <img
           src={q.image}
           alt={`Question ${current + 1}`}
-          className="w-full h-40 object-cover rounded mb-4"
+          className="w-full h-40 object-cover rounded mb-2"
         />
       ) : (
         <ColorCardPlaceholder
           id={q.id}
           text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
-          className="w-full h-40 rounded mb-4"
+          className="w-full h-40 rounded mb-2"
         />
       )}
-      <div className="mb-4">
+      <div className="mb-1 font-bold">{q.question}</div>
+      <div className="mb-2">
         <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
           Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
         </span>
@@ -122,8 +123,9 @@ export default function MultiplayerSession({
             <div className="font-semibold text-sm mb-1">Answered:</div>
             <ul className="text-xs">
               {mpAllAnswers.map((a: any, i: number) => (
-                <li key={a.nickname}>
-                  <span className={a.nickname === nickname ? "font-bold text-emerald-700" : ""}>
+                <li key={a.nickname} className="flex items-center mb-1">
+                  <UserAvatar username={a.nickname} size="sm" />
+                  <span className={`ml-1 ${a.nickname === nickname ? "font-bold text-emerald-700" : ""}`}>
                     {i + 1}. {a.nickname}
                   </span>
                   {a.nickname === nickname && " (You)"}
@@ -184,15 +186,18 @@ export default function MultiplayerSession({
                 return b.points - a.points;
               })
               .map((item: { nick: string; points: number; speedBonus: number }, i: number) => (
-                <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
-                  {item.nick}: {item.points} pts
-                  {item.points > 0 && (
-                    <span className="text-sm text-gray-600 ml-1">
-                      ({item.speedBonus > 0 ? `1000 + ${item.speedBonus} speed bonus` : "1000 pts"})
-                    </span>
-                  )}
-                  {i === 0 && item.points > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
-                  {item.nick === nickname && " (You)"}
+                <li key={item.nick} className={`flex items-center mb-1 ${item.nick === nickname ? "font-bold text-emerald-700" : ""}`}>
+                  <UserAvatar username={item.nick} size="sm" />
+                  <span className="ml-2">
+                    {item.nick}: {item.points} pts
+                    {item.points > 0 && (
+                      <span className="text-sm text-gray-600 ml-1">
+                        ({item.speedBonus > 0 ? `1000 + ${item.speedBonus} speed bonus` : "1000 pts"})
+                      </span>
+                    )}
+                    {i === 0 && item.points > 0 && <span className="ml-1 text-yellow-600 font-bold">🏆</span>}
+                    {item.nick === nickname && " (You)"}
+                  </span>
                 </li>
               ))}
           </ul>

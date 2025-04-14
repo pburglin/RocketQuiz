@@ -108,21 +108,21 @@ export default function SinglePlayerSession({
       <div className="mt-6 mb-2 text-lg font-semibold">
         Question {current + 1} of {questions.length}
       </div>
-      <div className="mb-2 font-bold">{q.question}</div>
       {q.image && q.image.trim() !== "" ? (
         <img
           src={q.image}
           alt={`Question ${current + 1}`}
-          className="w-full h-40 object-cover rounded mb-4"
+          className="w-full h-40 object-cover rounded mb-2"
         />
       ) : (
         <ColorCardPlaceholder
           id={q.id}
           text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
-          className="w-full h-40 rounded mb-4"
+          className="w-full h-40 rounded mb-2"
         />
       )}
-      <div className="mb-4">
+      <div className="mb-1 font-bold">{q.question}</div>
+      <div className="mb-2">
         <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
           Time left: {timer} second{timer !== 1 ? "s" : ""}
         </span>

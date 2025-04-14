@@ -3,6 +3,7 @@ import QRCode from "react-qr-code";
 import { useState, useEffect } from "react";
 import { db } from "../firebaseClient";
 import { doc, setDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { UserAvatar } from "./index";
 
 export default function MultiplayerLobby({
   quiz,
@@ -148,15 +149,18 @@ export default function MultiplayerLobby({
           </div>
           <div className="mb-4">
             <div className="font-semibold mb-1">Players in lobby:</div>
-            <ul className="list-disc pl-6">
+            <ul className="space-y-2">
               {players.map((p: string) => (
-                <li key={p} className={p === nickname ? "font-bold text-emerald-700 flex items-center" : "flex items-center"}>
-                  <span>{p}</span>
-                  {isOrganizer && p === nickname && <span> (You, Organizer)</span>}
-                  {!isOrganizer && p === nickname && <span> (You)</span>}
+                <li key={p} className={`flex items-center justify-between ${p === nickname ? "font-bold text-emerald-700" : ""}`}>
+                  <div className="flex items-center">
+                    <UserAvatar username={p} size="md" />
+                    <span className="ml-2">{p}</span>
+                    {isOrganizer && p === nickname && <span className="ml-1">(You, Organizer)</span>}
+                    {!isOrganizer && p === nickname && <span className="ml-1">(You)</span>}
+                  </div>
                   {isOrganizer && p !== nickname && (
                     <button
-                      className="ml-2 px-2 py-0.5 bg-red-500 text-white rounded text-xs"
+                      className="px-2 py-0.5 bg-red-500 text-white rounded text-xs"
                       onClick={async () => {
                         // Firestore logic to remove player
                         if (sessionId && p) {

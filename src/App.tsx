@@ -10,6 +10,8 @@ import MultiplayerGamePage from "./pages/MultiplayerGamePage";
 import ResultsPage from "./pages/ResultsPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import About from "./pages/About";
+import Privacy from "./pages/Privacy";
 import Navbar from "./components/Navbar";
 import { useEffect, useState } from "react";
 import { auth } from "./firebaseClient";
@@ -42,6 +44,8 @@ function App() {
           <Route path="/play/quiz/:id/multiplayer/lobby" element={<MultiplayerLobbyPage />} />
           <Route path="/play/quiz/:id/multiplayer/game" element={<MultiplayerGamePage />} />
           <Route path="/play/quiz/:id/results" element={<ResultsPage />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<Privacy />} />
         </Routes>
       </div>
     </Router>
