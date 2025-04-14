@@ -36,11 +36,7 @@ export default function Leaderboard({
               .map((nick: string) => {
                 // mpScores contains the total accumulated score for each player from all questions
                 const totalScore = mpScores[nick] || 0;
-                // Estimate the number of correct answers based on the total score
-                // This is an approximation since we don't have the exact breakdown
-                const estimatedCorrectAnswers = Math.floor(totalScore / 1000);
-                const estimatedSpeedBonus = totalScore - (estimatedCorrectAnswers * 1000);
-                return { nick, totalScore, correctAnswers: estimatedCorrectAnswers, totalSpeedBonus: estimatedSpeedBonus };
+                return { nick, totalScore };
               })
               // Sort by top score (highest first)
               .sort((a: { totalScore: number }, b: { totalScore: number }) => {
@@ -48,12 +44,9 @@ export default function Leaderboard({
                 // since we don't have individual question scores in the final leaderboard
                 return b.totalScore - a.totalScore;
               })
-              .map((item: { nick: string; totalScore: number; correctAnswers: number; totalSpeedBonus: number }, i: number) => (
+              .map((item: { nick: string; totalScore: number }, i: number) => (
                 <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
                   {item.nick}: {item.totalScore} pts
-                  <span className="text-sm text-gray-600 ml-1">
-                    (approx. {item.correctAnswers} correct × 1000 + {item.totalSpeedBonus} total speed bonus)
-                  </span>
                   {i === 0 && item.totalScore > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}
                   {item.nick === nickname && " (You)"}
                 </li>
