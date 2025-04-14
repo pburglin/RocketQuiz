@@ -178,8 +178,11 @@ export default function MultiplayerSession({
                 }
                 return { nick, points, speedBonus };
               })
-              // Sort players by points (highest first)
-              .sort((a: { points: number }, b: { points: number }) => b.points - a.points)
+              // Sort players by their top score for this question
+              .sort((a: { points: number }, b: { points: number }) => {
+                // First sort by points for this question (highest first)
+                return b.points - a.points;
+              })
               .map((item: { nick: string; points: number; speedBonus: number }, i: number) => (
                 <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
                   {item.nick}: {item.points} pts

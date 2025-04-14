@@ -216,6 +216,8 @@ export default function ResultsPage() {
   const finalLeaderboard = mpLeaderboard.length > 0 ? mpLeaderboard :
     Object.keys(mpScores).length > 0 ?
       Object.entries(mpScores as Record<string, number>)
+        // Sort by top score (highest first)
+        // Note: Currently we only have access to total scores, not individual question scores
         .sort((a, b) => b[1] - a[1])
         .map(([nick]) => nick) :
       [];

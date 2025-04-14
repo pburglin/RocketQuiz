@@ -31,8 +31,12 @@ export default function Leaderboard({
                 const totalSpeedBonus = totalScore - (correctAnswers * 1000); // Total speed bonus across all questions
                 return { nick, totalScore, correctAnswers, totalSpeedBonus };
               })
-              // Sort by score (highest first)
-              .sort((a: { totalScore: number }, b: { totalScore: number }) => b.totalScore - a.totalScore)
+              // Sort by top score (highest first)
+              .sort((a: { totalScore: number }, b: { totalScore: number }) => {
+                // For now, we're using totalScore as the sorting criteria
+                // since we don't have individual question scores in the final leaderboard
+                return b.totalScore - a.totalScore;
+              })
               .map((item: { nick: string; totalScore: number; correctAnswers: number; totalSpeedBonus: number }, i: number) => (
                 <li key={item.nick} className={item.nick === nickname ? "font-bold text-emerald-700" : ""}>
                   {item.nick}: {item.totalScore} pts

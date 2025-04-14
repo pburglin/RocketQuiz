@@ -253,6 +253,8 @@ export default function MultiplayerGamePage() {
       setMpScores(newScores);
       // Update leaderboard
       const sorted = Object.entries(newScores)
+        // Sort by top score (highest first)
+        // Note: Currently we only have access to total scores, not individual question scores
         .sort((a, b) => b[1] - a[1])
         .map(([nick]) => nick);
       setMpLeaderboard(sorted);
@@ -377,6 +379,8 @@ export default function MultiplayerGamePage() {
             
             console.log("Final calculated scores:", scores);
             leaderboard = Object.entries(scores)
+              // Sort by top score (highest first)
+              // Note: Currently we only have access to total scores, not individual question scores
               .sort((a, b) => b[1] - a[1])
               .map(([nick]) => nick);
               
