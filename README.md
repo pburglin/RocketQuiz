@@ -141,6 +141,7 @@ RocketQuiz is a modern, production-ready, Kahoot-like quizzer web app built with
 - **Backend:** Supabase (SaaS, SQL migrations in `supabase/migrations`)
 - **Config:** Environment variables in `.env` (see `.env.example`)
 - **Images:** Stock photos from Unsplash (linked, not downloaded)
+- **PWA Support:** Progressive Web App capabilities for mobile installation
 
 ---
 
@@ -168,6 +169,20 @@ RocketQuiz is a modern, production-ready, Kahoot-like quizzer web app built with
 - `supabase/migrations/` - SQL migration files for Supabase
 - `.env` - Environment variables (not committed)
 - `.env.example` - Example env file with documentation
+- `public/icons/` - PWA icons and icon generator
+
+---
+
+## Progressive Web App (PWA) Support
+
+RocketQuiz is configured as a Progressive Web App, allowing users to install it on their devices:
+
+1. **Installation:** Users can add RocketQuiz to their home screen by clicking the "Add to Home Screen" link in the footer.
+2. **Offline Support:** Basic offline functionality is provided through service worker caching.
+3. **Icon Generation:** To generate the required PWA icons:
+   - Open `public/icons/generate-icons.html` in a browser
+   - Download the generated icons
+   - Save them as `public/icons/icon-192x192.png` and `public/icons/icon-512x512.png`
 
 ---
 

@@ -25,7 +25,7 @@ export default function Leaderboard({
 
   return (
     <div className="max-w-2xl mx-auto p-4 text-center">
-      <h1 className="text-3xl font-bold mb-4">Quiz Complete!</h1>
+      <h1 className="text-3xl font-bold mb-4">Quiz Completed!</h1>
       <h2 className="text-xl font-semibold mb-6">{quiz?.title}</h2>
 
       {isMultiplayer ? (
