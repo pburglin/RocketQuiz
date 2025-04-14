@@ -47,9 +47,78 @@ export default function About() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
             <p className="text-gray-700 mb-4">
-              Have questions, suggestions, or feedback? We'd love to hear from you! 
-              Reach out to us at the project Git repository, just create an issue with your message.
+              Have questions, suggestions, or feedback? We'd love to hear from you!{" "}
+              Please contact us by creating a new issue at{" "}
+              <a
+                href="https://github.com/pburglin/RocketQuiz/issues"
+                className="text-blue-600 underline hover:text-blue-800"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                https://github.com/pburglin/RocketQuiz/issues
+              </a>.
             </p>
+          </section>
+
+          <section className="mt-12">
+            <h2 className="text-2xl font-semibold mb-4">Other apps by the same author</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+            <li>
+                <strong>RocketFood</strong> - Scan food labels to identify potentially harmful or misleading ingredients.{" "}
+                <a
+                  href="https://rocketfood.us/"
+                  className="text-blue-600 underline hover:text-blue-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://rocketfood.us/
+                </a>
+              </li>
+              <li>
+                <strong>RocketMoto</strong> - Discover new routes to explore with your motorcycle.{" "}
+                <a
+                  href="https://rocketmoto.us/"
+                  className="text-blue-600 underline hover:text-blue-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://rocketmoto.us/
+                </a>
+              </li>
+              <li>
+                <strong>SiteCheck</strong> - Track website availability status, check SSL certificates and more.{" "}
+                <a
+                  href="https://sitecheck.us/"
+                  className="text-blue-600 underline hover:text-blue-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://sitecheck.us/
+                </a>
+              </li>
+              <li>
+                <strong>RocketMap</strong> - Track your position against property boundaries.{" "}
+                <a
+                  href="https://rocketmap.netlify.app/"
+                  className="text-blue-600 underline hover:text-blue-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://rocketmap.netlify.app/
+                </a>
+              </li>
+              <li>
+                <strong>Eventfy.com</strong> - Use AI to create interactive stories with graphics and multi-player.{" "}
+                <a
+                  href="https://eventfy.com/"
+                  className="text-blue-600 underline hover:text-blue-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://eventfy.com/
+                </a>
+              </li>
+            </ul>
           </section>
         </div>
       </main>

@@ -46,7 +46,6 @@ export default function Privacy() {
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li>Provide, maintain, and improve our service</li>
               <li>Process and complete transactions</li>
-              <li>Send you technical notices and support messages</li>
               <li>Respond to your comments and questions</li>
               <li>Monitor and analyze usage patterns</li>
               <li>Protect against, identify, and prevent fraud and other illegal activity</li>
@@ -88,8 +87,15 @@ export default function Privacy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
             <p className="text-gray-700 mb-4">
-              If you have any questions about this Privacy Policy, please contact us at 
-              the project Git repository, just create a new issue with your message details.
+              If you have any questions about this Privacy Policy, please contact us by creating a new issue at{" "}
+              <a
+                href="https://github.com/pburglin/RocketQuiz/issues"
+                className="text-blue-600 underline hover:text-blue-800"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                https://github.com/pburglin/RocketQuiz/issues
+              </a>.
             </p>
           </section>
         </div>
