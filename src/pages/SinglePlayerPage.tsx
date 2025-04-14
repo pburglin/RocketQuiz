@@ -14,6 +14,13 @@ export default function SinglePlayerPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [spScore, setSpScore] = useState(0);
+  const [spCorrectAnswers, setSpCorrectAnswers] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const storedCorrectAnswers = localStorage.getItem("sp_correctAnswers");
+      return storedCorrectAnswers ? parseInt(storedCorrectAnswers, 10) : 0;
+    }
+    return 0;
+  });
   const [spCurrentSpeedBonus, setSpCurrentSpeedBonus] = useState(0);
   const [spSelected, setSpSelected] = useState<number | null>(null);
   const [nextQuestionTimer, setNextQuestionTimer] = useState<number | null>(null);
@@ -131,6 +138,8 @@ export default function SinglePlayerPage() {
       setShowAnswer={setShowAnswer}
       spScore={spScore}
       setSpScore={setSpScore}
+      spCorrectAnswers={spCorrectAnswers}
+      setSpCorrectAnswers={setSpCorrectAnswers}
       spCurrentSpeedBonus={spCurrentSpeedBonus}
       setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
       spSelected={spSelected}
@@ -140,8 +149,9 @@ export default function SinglePlayerPage() {
       timerRef={timerRef}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
       onFinish={() => {
-        // Store the score in localStorage so ResultsPage can access it
+        // Store the score and correct answers count in localStorage so ResultsPage can access it
         localStorage.setItem('sp_score', spScore.toString());
+        localStorage.setItem('sp_correctAnswers', spCorrectAnswers.toString());
         navigate(`/play/quiz/${id}/results`);
       }}
     />

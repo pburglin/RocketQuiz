@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StarRating from "./StarRating";
 
 export default function Leaderboard({
@@ -12,6 +12,14 @@ export default function Leaderboard({
   onFindAnotherQuiz,
   onRateQuiz,
 }: any) {
+  // Get the correct answers count from localStorage
+  const [correctAnswers, setCorrectAnswers] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const storedCorrectAnswers = localStorage.getItem("sp_correctAnswers");
+      return storedCorrectAnswers ? parseInt(storedCorrectAnswers, 10) : 0;
+    }
+    return 0;
+  });
   const [userRating, setUserRating] = useState(0);
   console.log("[Leaderboard] Render", { quiz, isMultiplayer, mpLeaderboard, mpScores, nickname, spScore });
 
@@ -58,7 +66,7 @@ export default function Leaderboard({
           <div className="text-4xl text-blue-700 font-bold">{spScore}</div>
           {spScore > 0 && (
             <div className="text-sm text-gray-600 mt-2">
-              {Math.floor(spScore / 1000)} correct answers × 1000 + {spScore % 1000} speed bonus
+              {correctAnswers} correct answers × 1000 + {spScore - (correctAnswers * 1000)} speed bonus
             </div>
           )}
         </div>

@@ -12,6 +12,8 @@ export default function SinglePlayerSession({
   setShowAnswer,
   spScore,
   setSpScore,
+  spCorrectAnswers,
+  setSpCorrectAnswers,
   spCurrentSpeedBonus,
   setSpCurrentSpeedBonus,
   spSelected,
@@ -32,6 +34,8 @@ export default function SinglePlayerSession({
   setShowAnswer: React.Dispatch<React.SetStateAction<boolean>>;
   spScore: number;
   setSpScore: React.Dispatch<React.SetStateAction<number>>;
+  spCorrectAnswers: number;
+  setSpCorrectAnswers: React.Dispatch<React.SetStateAction<number>>;
   spCurrentSpeedBonus: number;
   setSpCurrentSpeedBonus: React.Dispatch<React.SetStateAction<number>>;
   spSelected: number | null;
@@ -64,6 +68,12 @@ export default function SinglePlayerSession({
       const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
       setSpCurrentSpeedBonus(speedBonus); // Store the current speed bonus
       setSpScore((prev) => prev + base + speedBonus);
+      setSpCorrectAnswers((prev) => prev + 1); // Increment correct answers count
+      
+      // Store correct answers count in localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sp_correctAnswers", String(spCorrectAnswers + 1));
+      }
     } else {
       setSpCurrentSpeedBonus(0); // No speed bonus for incorrect answers
     }

@@ -52,6 +52,13 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   // Single player scoring
   const [spScore, setSpScore] = useState(0);
+  const [spCorrectAnswers, setSpCorrectAnswers] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const storedCorrectAnswers = localStorage.getItem("sp_correctAnswers");
+      return storedCorrectAnswers ? parseInt(storedCorrectAnswers, 10) : 0;
+    }
+    return 0;
+  });
   const [spCurrentSpeedBonus, setSpCurrentSpeedBonus] = useState(0);
   const [spSelected, setSpSelected] = useState<number | null>(null);
 
@@ -385,6 +392,8 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         setShowAnswer={setShowAnswer}
         spScore={spScore}
         setSpScore={setSpScore}
+        spCorrectAnswers={spCorrectAnswers}
+        setSpCorrectAnswers={setSpCorrectAnswers}
         spCurrentSpeedBonus={spCurrentSpeedBonus}
         setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
         spSelected={spSelected}
@@ -434,7 +443,7 @@ const PlayQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   }
     return (
       <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
+        <h1 className="text-2xl font-bold mb-2">{quiz?.title}</h1>
         <div className="mb-4 text-gray-600">Multiplayer Lobby</div>
         {lobbyLoading ? (
           <div className="text-lg text-gray-700">Setting up session...</div>
