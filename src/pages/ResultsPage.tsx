@@ -46,6 +46,8 @@ export default function ResultsPage() {
     }
   }, []);
   const { id } = useParams<{ id: string }>();
+  // Resolved quizId: from URL param or fetched from session doc
+  const [resolvedQuizId, setResolvedQuizId] = useState<string | null>(id || null);
   const navigate = useNavigate();
   const location = useLocation();
   const [quiz, setQuiz] = useState<any>(null);
@@ -59,6 +61,27 @@ export default function ResultsPage() {
     return 0;
   });
   const [nickname, setNickname] = useState<string>(() => {
+
+ // If id is not present but sessionId is, fetch quizId from session doc
+ useEffect(() => {
+   if (!id && sessionId) {
+     const fetchQuizIdFromSession = async () => {
+       try {
+         const sessionRef = doc(db, "sessions", sessionId);
+         const sessionSnap = await getDoc(sessionRef);
+         if (sessionSnap.exists()) {
+           const data = sessionSnap.data();
+           if (data.quizId) {
+             setResolvedQuizId(data.quizId);
+           }
+         }
+       } catch (e) {
+         console.error("Error fetching quizId from session:", e);
+       }
+     };
+     fetchQuizIdFromSession();
+   }
+ }, [id, sessionId]);
     if (typeof window !== "undefined") {
       return localStorage.getItem("mp_nickname") || "";
     }
@@ -75,12 +98,12 @@ export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
-      if (!sessionId || !id) return;
+      if (!sessionId || !resolvedQuizId) return;
 
       // Fetch all questions for this quiz
       let questionIds: string[] = [];
       try {
-        const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+        const questionsSnap = await getDocs(collection(db, "quizzes", resolvedQuizId, "questions"));
         questionIds = questionsSnap.docs.map((doc) => doc.id);
       } catch (e) {
         console.error("Error fetching questions:", e);
@@ -94,7 +117,7 @@ export default function ResultsPage() {
       // Build a map of questionId -> correctAnswer
       const correctAnswersMap: { [qid: string]: number } = {};
       try {
-        const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+        const questionsSnap = await getDocs(collection(db, "quizzes", resolvedQuizId, "questions"));
         questionsSnap.forEach((docSnap) => {
           const data = docSnap.data();
           if (typeof data.correctAnswer === "number") {
@@ -144,18 +167,18 @@ export default function ResultsPage() {
     }
 
     fetchMultiplayerResults();
-  }, [sessionId, id]);
+  }, [sessionId, resolvedQuizId]);
 
   useEffect(() => {
     async function fetchQuiz() {
-      if (!id) return;
-      const quizDoc = await getDoc(doc(db, "quizzes", id));
+      if (!resolvedQuizId) return;
+      const quizDoc = await getDoc(doc(db, "quizzes", resolvedQuizId));
       if (quizDoc.exists()) {
         setQuiz({ id: quizDoc.id, ...quizDoc.data() });
       }
     }
     fetchQuiz();
-  }, [id]);
+  }, [resolvedQuizId]);
 
 
   const handleRateQuiz = async (rating: number) => {
