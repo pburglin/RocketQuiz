@@ -10,7 +10,14 @@ export default function MultiplayerLobbyPage() {
   const [quiz, setQuiz] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState<string>("");
-  const [nickname, setNickname] = useState<string>("");
+  const [nickname, setNickname] = useState<string>(() => {
+    // Check if we have a saved nickname in localStorage
+    if (typeof window !== "undefined") {
+      const savedNickname = localStorage.getItem("mp_nickname");
+      return savedNickname || "";
+    }
+    return "";
+  });
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
   const [isOrganizer, setIsOrganizer] = useState<boolean>(false);
