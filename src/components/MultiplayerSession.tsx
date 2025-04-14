@@ -188,7 +188,7 @@ export default function MultiplayerSession({
                   {item.nick}: {item.points} pts
                   {item.points > 0 && (
                     <span className="text-sm text-gray-600 ml-1">
-                      (1000 + {item.speedBonus} speed bonus)
+                      ({item.speedBonus > 0 ? `1000 + ${item.speedBonus} speed bonus` : "1000 pts"})
                     </span>
                   )}
                   {i === 0 && item.points > 0 && <span className="ml-2 text-yellow-600 font-bold">🏆</span>}

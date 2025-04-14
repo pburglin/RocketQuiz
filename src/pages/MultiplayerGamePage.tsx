@@ -232,8 +232,16 @@ export default function MultiplayerGamePage() {
       if (sessionId) {
         const sessionRef = doc(db, "sessions", sessionId);
         const sessionSnap = await getDoc(sessionRef);
-        if (sessionSnap.exists() && sessionSnap.data().questionStart?.toMillis) {
-          questionStart = sessionSnap.data().questionStart.toMillis();
+        if (sessionSnap.exists()) {
+          const sessionData = sessionSnap.data();
+          // First try to get the question start time from questionStartTimes
+          if (sessionData.questionStartTimes && sessionData.questionStartTimes[current]?.toMillis) {
+            questionStart = sessionData.questionStartTimes[current].toMillis();
+          }
+          // Fallback to questionStart for backward compatibility
+          else if (sessionData.questionStart?.toMillis) {
+            questionStart = sessionData.questionStart.toMillis();
+          }
         }
       }
       mpAllAnswers.forEach((a) => {
