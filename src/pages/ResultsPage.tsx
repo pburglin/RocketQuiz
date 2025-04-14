@@ -29,6 +29,20 @@ export default function ResultsPage() {
         console.error("No session ID found in URL or localStorage");
       }
     }
+  // Clear multiplayer data if not in multiplayer mode (i.e., after single player game)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("session")) {
+      // Not multiplayer: clear multiplayer data from localStorage and state
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("mp_scores");
+        localStorage.removeItem("mp_leaderboard");
+        localStorage.removeItem("mp_sessionId");
+      }
+      setMpScores({});
+      setMpLeaderboard([]);
+    }
+  }, []);
   }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
