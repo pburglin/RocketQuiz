@@ -254,12 +254,6 @@ export default function SearchQuiz() {
             filteredQuizzes.map((quiz) => (
               <div key={quiz.id}>
                 <QuizCard quiz={quiz} />
-                <div className="text-xs text-gray-400 ml-2">
-                  {/* Debug: show questionCount */}
-                  {typeof quiz.questionCount === "number"
-                    ? `Questions: ${quiz.questionCount}`
-                    : "No questionCount"}
-                </div>
               </div>
             ))
           )}

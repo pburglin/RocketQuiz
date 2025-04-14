@@ -11,10 +11,11 @@ export default function QuizCard({
     description: string;
     tags: string[];
     image: string;
-    popularity: number;
+    popularity?: number;
     language: string;
     averageRating?: number;
     ratingCount?: number;
+    questionCount?: number;
   };
 }) {
   return (
@@ -67,8 +68,13 @@ export default function QuizCard({
         </div>
         <div className="flex items-center justify-between mt-auto pt-2">
           <span className="text-xs text-gray-400">{quiz.language}</span>
+          <span className="text-xs text-gray-600 font-medium text-center flex-1">
+            {typeof quiz.questionCount === "number" ? `${quiz.questionCount} Questions` : ""}
+          </span>
           <span className="text-xs text-emerald-500 font-bold">
-            {quiz.popularity}% Popular
+            {typeof quiz.popularity === "number" && !isNaN(quiz.popularity)
+              ? `${quiz.popularity}% Popular`
+              : "0% Popular"}
           </span>
         </div>
       </div>
