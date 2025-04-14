@@ -21,6 +21,34 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
+  // Ensure theme is applied on every app load
+  useEffect(() => {
+    const THEME_KEY = "rocketquiz_theme";
+    function applyTheme(theme: "light" | "dark") {
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+    // Apply theme on mount
+    const storedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light";
+    applyTheme(storedTheme);
+
+    // Listen for theme changes in localStorage (e.g., from Profile page)
+    function handleStorage(e: StorageEvent) {
+      if (e.key === THEME_KEY) {
+        const newTheme = (e.newValue as "light" | "dark") || "light";
+        applyTheme(newTheme);
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);

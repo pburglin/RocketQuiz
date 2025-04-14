@@ -22,11 +22,7 @@ export default function Profile({ user }: ProfileProps) {
     setNickname(storedNickname);
     const storedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light";
     setTheme(storedTheme);
-    if (storedTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // No longer manipulate document.documentElement here
   }, []);
 
   // Redirect to login if not authenticated
@@ -54,11 +50,7 @@ export default function Profile({ user }: ProfileProps) {
     const newTheme = e.target.value as "light" | "dark";
     setTheme(newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // No longer manipulate document.documentElement here
   };
 
   const handleDeleteAccount = async () => {
@@ -80,32 +72,42 @@ export default function Profile({ user }: ProfileProps) {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-12 p-6 bg-white rounded-lg shadow">
+    <div
+      className={`max-w-lg mx-auto mt-12 p-6 rounded-lg shadow ${
+        theme === "dark"
+          ? "dark bg-gray-900 shadow-lg border border-gray-700 text-gray-100"
+          : "bg-white shadow text-gray-900"
+      }`}
+    >
       <h1 className="text-2xl font-bold mb-4">Profile</h1>
       <div className="mb-4">
-        <label className="block text-gray-700 font-semibold mb-1">Email</label>
-        <div className="p-2 bg-gray-100 rounded">{user.email}</div>
+        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Email</label>
+        <div className={`p-2 rounded ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"}`}>{user.email}</div>
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 font-semibold mb-1" htmlFor="nickname">
+        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`} htmlFor="nickname">
           Default Nickname for Multiplayer
         </label>
         <input
           id="nickname"
           type="text"
-          className="w-full p-2 border rounded"
+          className={`w-full p-2 border rounded ${theme === "dark" ? "bg-gray-800 border-gray-700 text-gray-100" : ""}`}
           value={nickname}
           onChange={handleNicknameChange}
         />
         <button
-          className="mt-2 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+          className={`mt-2 px-4 py-2 text-white rounded ${
+            theme === "dark"
+              ? "bg-emerald-700 hover:bg-emerald-800"
+              : "bg-emerald-600 hover:bg-emerald-700"
+          }`}
           onClick={handleSaveNickname}
         >
           Save Nickname
         </button>
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 font-semibold mb-1">UI Theme</label>
+        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>UI Theme</label>
         <div className="flex gap-4">
           <label>
             <input
@@ -131,7 +133,11 @@ export default function Profile({ user }: ProfileProps) {
       </div>
       <div className="mt-8">
         <button
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className={`px-4 py-2 text-white rounded ${
+            theme === "dark"
+              ? "bg-red-700 hover:bg-red-800"
+              : "bg-red-600 hover:bg-red-700"
+          }`}
           onClick={handleDeleteAccount}
           disabled={loading}
         >
