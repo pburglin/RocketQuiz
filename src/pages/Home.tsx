@@ -42,7 +42,7 @@ export default function Home({ user }: HomeProps) {
           </div>
           <div className="flex-1 flex justify-center">
             <img
-              src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=600&q=80"
+              src="/rocketquiz-logo.png"
               alt="Quiz fun"
               className="rounded-2xl shadow-2xl w-full max-w-md object-cover"
               loading="lazy"
