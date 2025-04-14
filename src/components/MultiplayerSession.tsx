@@ -38,7 +38,7 @@ export default function MultiplayerSession({
   if (!q) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">No question data available.</div>
+        <div className="text-lg text-gray-700">Loading questions, get ready!</div>
       </div>
     );
   }
