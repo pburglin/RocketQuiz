@@ -46,7 +46,6 @@ export default function SinglePlayerSession({
   onQuit: () => void;
   onFinish: () => void;
 }) {
-  console.log("[SinglePlayerSession] Render, current:", current, "showAnswer:", showAnswer);
 
   // Reset correctAnswers when starting a new game (when current is 0 and not showing answer)
   React.useEffect(() => {
@@ -209,7 +208,6 @@ export default function SinglePlayerSession({
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded"
             onClick={() => {
-              console.log("[SinglePlayerSession] onFinish (last question)");
               onFinish();
             }}
           >

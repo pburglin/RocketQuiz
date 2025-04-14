@@ -29,6 +29,8 @@ export default function ResultsPage() {
         console.error("No session ID found in URL or localStorage");
       }
     }
+  }, []);
+
   // Clear multiplayer data if not in multiplayer mode (i.e., after single player game)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,7 +44,6 @@ export default function ResultsPage() {
       setMpScores({});
       setMpLeaderboard([]);
     }
-  }, []);
   }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
