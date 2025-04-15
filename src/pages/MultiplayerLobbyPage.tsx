@@ -23,6 +23,18 @@ export default function MultiplayerLobbyPage() {
   const [isOrganizer, setIsOrganizer] = useState<boolean>(false);
   const [lobbyLoading, setLobbyLoading] = useState<boolean>(false);
 
+  // Clear previous game data from localStorage when entering lobby
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("Clearing previous game data (scores, leaderboard) from localStorage...");
+      localStorage.removeItem("sp_score");
+      localStorage.removeItem("sp_correctAnswers");
+      localStorage.removeItem("mp_scores");
+      localStorage.removeItem("mp_leaderboard");
+      // We keep mp_sessionId, mp_nickname, and mp_isOrganizer as they are set/read here in the lobby
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   useEffect(() => {
     async function fetchQuiz() {
       if (!id) return;

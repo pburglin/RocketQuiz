@@ -27,6 +27,19 @@ export default function SinglePlayerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear previous game data from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("Clearing previous game data from localStorage...");
+      localStorage.removeItem("sp_score");
+      localStorage.removeItem("sp_correctAnswers");
+      localStorage.removeItem("mp_sessionId");
+      localStorage.removeItem("mp_scores");
+      localStorage.removeItem("mp_leaderboard");
+      localStorage.removeItem("mp_nickname");     
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   useEffect(() => {
     async function fetchQuiz() {
       setLoading(true);
