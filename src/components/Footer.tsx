@@ -1,5 +1,3 @@
-import AddToHomeScreen from './AddToHomeScreen';
-
 export default function Footer() {
   return (
     <footer className="w-full bg-white/80 border-t border-gray-200 py-6 mt-16">
@@ -11,7 +9,6 @@ export default function Footer() {
           <a href="/about" className="hover:text-emerald-600 transition">About</a>
           <a href="/privacy" className="hover:text-emerald-600 transition">Privacy</a>
           <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 transition">Photos: Unsplash</a>
-          <AddToHomeScreen />
         </div>
       </div>
     </footer>

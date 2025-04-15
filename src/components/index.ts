@@ -4,4 +4,3 @@ export { default as QuizCard } from "./QuizCard";
 export { default as Footer } from "./Footer";
 export { default as StarRating } from "./StarRating";
 export { default as UserAvatar } from "./UserAvatar";
-export { default as AddToHomeScreen } from "./AddToHomeScreen";

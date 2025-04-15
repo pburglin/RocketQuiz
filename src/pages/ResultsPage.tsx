@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Leaderboard from "../components/Leaderboard";
 import { db } from "../firebaseClient";
-import { doc, getDoc, getDocs, collection, updateDoc, arrayUnion, increment, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot } from "firebase/firestore";
 
 export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore session doc
@@ -30,24 +30,7 @@ export default function ResultsPage() {
       }
     }
   }, []);
-
-  // Clear multiplayer data if not in multiplayer mode (i.e., after single player game)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.get("session")) {
-      // Not multiplayer: clear multiplayer data from localStorage and state
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("mp_scores");
-        localStorage.removeItem("mp_leaderboard");
-        localStorage.removeItem("mp_sessionId");
-      }
-      setMpScores({});
-      setMpLeaderboard([]);
-    }
-  }, []);
   const { id } = useParams<{ id: string }>();
-  // Resolved quizId: from URL param or fetched from session doc
-  const [resolvedQuizId, setResolvedQuizId] = useState<string | null>(id || null);
   const navigate = useNavigate();
   const location = useLocation();
   const [quiz, setQuiz] = useState<any>(null);
@@ -61,124 +44,137 @@ export default function ResultsPage() {
     return 0;
   });
   const [nickname, setNickname] = useState<string>(() => {
-
- // If id is not present but sessionId is, fetch quizId from session doc
- useEffect(() => {
-   if (!id && sessionId) {
-     const fetchQuizIdFromSession = async () => {
-       try {
-         const sessionRef = doc(db, "sessions", sessionId);
-         const sessionSnap = await getDoc(sessionRef);
-         if (sessionSnap.exists()) {
-           const data = sessionSnap.data();
-           if (data.quizId) {
-             setResolvedQuizId(data.quizId);
-           }
-         }
-       } catch (e) {
-         console.error("Error fetching quizId from session:", e);
-       }
-     };
-     fetchQuizIdFromSession();
-   }
- }, [id, sessionId]);
     if (typeof window !== "undefined") {
       return localStorage.getItem("mp_nickname") || "";
     }
     return "";
   });
-  const [isMultiplayer, setIsMultiplayer] = useState<boolean>(() => {
-    // Check URL parameters first - if there's a session parameter, it's definitely multiplayer
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("session")) {
-      return true;
-    }
-    return false;
-  });
+  const [isMultiplayer, setIsMultiplayer] = useState<boolean>(false);
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
-      if (!sessionId || !resolvedQuizId) return;
-
-      // Fetch all questions for this quiz
-      let questionIds: string[] = [];
-      try {
-        const questionsSnap = await getDocs(collection(db, "quizzes", resolvedQuizId, "questions"));
-        questionIds = questionsSnap.docs.map((doc) => doc.id);
-      } catch (e) {
-        console.error("Error fetching questions:", e);
-      }
-
-      // If questionIds is empty, fallback to 5 questions (for compatibility)
-      if (questionIds.length === 0) {
-        questionIds = Array.from({ length: 5 }, (_, i) => String(i));
-      }
-
-      // Build a map of questionId -> correctAnswer
-      const correctAnswersMap: { [qid: string]: number } = {};
-      try {
-        const questionsSnap = await getDocs(collection(db, "quizzes", resolvedQuizId, "questions"));
-        questionsSnap.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (typeof data.correctAnswer === "number") {
-            correctAnswersMap[docSnap.id] = data.correctAnswer;
+      // First check localStorage for backup data
+      let foundData = false;
+      if (typeof window !== "undefined") {
+        const storedScores = localStorage.getItem("mp_scores");
+        const storedLeaderboard = localStorage.getItem("mp_leaderboard");
+        
+        if (storedScores && storedLeaderboard) {
+          try {
+            const scores = JSON.parse(storedScores);
+            const leaderboard = JSON.parse(storedLeaderboard);
+            console.log("Found backup scores and leaderboard in localStorage:", { scores, leaderboard });
+            
+            setMpScores(scores);
+            setMpLeaderboard(leaderboard);
+            setIsMultiplayer(true);
+            foundData = true;
+          } catch (error) {
+            console.error("Error parsing backup data from localStorage:", error);
           }
-        });
-      } catch (e) {
-        console.error("Error fetching correct answers:", e);
-      }
-
-      // Fetch all answers for all questions in this session
-      let allAnswers: any[] = [];
-      for (const qid of questionIds) {
-        try {
-          const responsesSnap = await getDocs(collection(db, "sessions", sessionId, "answers", qid, "responses"));
-          responsesSnap.forEach((docSnap) => {
-            const ans = docSnap.data();
-            allAnswers.push({ ...ans, nickname: docSnap.id, qid });
-          });
-        } catch (e) {
-          console.error(`Error fetching answers for question ${qid}:`, e);
         }
       }
-
-      // Calculate total scores for each player
-      const scores: { [nickname: string]: number } = {};
-      allAnswers.forEach((ans) => {
-        const correct = correctAnswersMap[ans.qid];
-        if (typeof correct === "number" && ans.answer === correct) {
-          const base = 1000;
-          const maxTime = ans.timeLimit || 30;
-          const timeTaken = ans.timeTaken || 0;
-          const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
-          const bonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
-          scores[ans.nickname] = (scores[ans.nickname] || 0) + base + bonus;
+      
+      // Then try to fetch from Firestore
+      if (!sessionId) {
+        if (!foundData) {
+          console.error("No sessionId and no backup data found");
+        }
+        return;
+      }
+      
+      console.log("Fetching multiplayer results for session:", sessionId);
+      
+      const sessionRef = doc(db, "sessions", sessionId);
+      const sessionSnap = await getDoc(sessionRef);
+      
+      if (sessionSnap.exists()) {
+        const data = sessionSnap.data();
+        console.log("Session data:", data);
+        
+        if (data.mpScores && data.mpLeaderboard) {
+          console.log("Found scores and leaderboard in Firestore:", data.mpScores, data.mpLeaderboard);
+          setMpScores(data.mpScores);
+          setMpLeaderboard(data.mpLeaderboard);
+          setIsMultiplayer(true);
+          
+          // Update localStorage with the latest data
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
+            localStorage.setItem("mp_leaderboard", JSON.stringify(data.mpLeaderboard));
+          }
+        } else {
+          console.error("Missing mpScores or mpLeaderboard in session data");
+          
+          // If leaderboard is missing but scores exist, create it
+          if (data.mpScores && !data.mpLeaderboard) {
+            console.log("Creating leaderboard from scores");
+            const scores = data.mpScores;
+            const leaderboard = Object.entries(scores as Record<string, number>)
+              .sort((a, b) => b[1] - a[1])
+              .map(([nick]) => nick);
+            
+            setMpLeaderboard(leaderboard);
+            setMpScores(scores);
+            setIsMultiplayer(true);
+            
+            // Update the session with the leaderboard
+            try {
+              await setDoc(sessionRef, { mpLeaderboard: leaderboard }, { merge: true });
+              console.log("Updated session with leaderboard");
+              
+              // Update localStorage with the latest data
+              if (typeof window !== "undefined") {
+                localStorage.setItem("mp_scores", JSON.stringify(scores));
+                localStorage.setItem("mp_leaderboard", JSON.stringify(leaderboard));
+              }
+            } catch (error) {
+              console.error("Error updating session with leaderboard:", error);
+            }
+          }
+        }
+      } else {
+        console.error("Session document does not exist");
+      }
+    }
+    
+    fetchMultiplayerResults();
+    
+    // Set up a listener for changes to the session document
+    if (sessionId) {
+      const sessionRef = doc(db, "sessions", sessionId);
+      const unsubscribe = onSnapshot(sessionRef, (snapshot: any) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.mpScores && data.mpLeaderboard) {
+            console.log("Real-time update - scores and leaderboard:", data.mpScores, data.mpLeaderboard);
+            setMpScores(data.mpScores);
+            setMpLeaderboard(data.mpLeaderboard);
+            setIsMultiplayer(true);
+            
+            // Update localStorage with the latest data
+            if (typeof window !== "undefined") {
+              localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
+              localStorage.setItem("mp_leaderboard", JSON.stringify(data.mpLeaderboard));
+            }
+          }
         }
       });
-
-      // Build leaderboard
-      const leaderboard = Object.entries(scores)
-        .sort((a, b) => b[1] - a[1])
-        .map(([nick]) => nick);
-
-      setMpScores(scores);
-      setMpLeaderboard(leaderboard);
-      setIsMultiplayer(true);
+      
+      return () => unsubscribe();
     }
-
-    fetchMultiplayerResults();
-  }, [sessionId, resolvedQuizId]);
+  }, [sessionId]);
 
   useEffect(() => {
     async function fetchQuiz() {
-      if (!resolvedQuizId) return;
-      const quizDoc = await getDoc(doc(db, "quizzes", resolvedQuizId));
+      if (!id) return;
+      const quizDoc = await getDoc(doc(db, "quizzes", id));
       if (quizDoc.exists()) {
         setQuiz({ id: quizDoc.id, ...quizDoc.data() });
       }
     }
     fetchQuiz();
-  }, [resolvedQuizId]);
+  }, [id]);
 
 
   const handleRateQuiz = async (rating: number) => {
@@ -216,42 +212,25 @@ export default function ResultsPage() {
     spScore
   });
 
-  // Create a fallback leaderboard if needed, but only if this is actually a multiplayer game
-  const finalLeaderboard = isMultiplayer ?
-    (mpLeaderboard.length > 0 ? mpLeaderboard :
-      Object.keys(mpScores).length > 0 ?
-        Object.entries(mpScores as Record<string, number>)
-          // Sort by top score (highest first)
-          .sort((a, b) => b[1] - a[1])
-          .map(([nick]) => nick) :
-        []) :
-    [];
+  // Create a fallback leaderboard if needed
+  const finalLeaderboard = mpLeaderboard.length > 0 ? mpLeaderboard :
+    Object.keys(mpScores).length > 0 ?
+      Object.entries(mpScores as Record<string, number>)
+        // Sort by top score (highest first)
+        // Note: Currently we only have access to total scores, not individual question scores
+        .sort((a, b) => b[1] - a[1])
+        .map(([nick]) => nick) :
+      [];
 
-  // Don't override the isMultiplayer state based on localStorage data
-  // This ensures we use the correct game mode based on the current session
-  
-  if (
-    !quiz ||
-    (isMultiplayer && (
-      !mpScores ||
-      Object.keys(mpScores).length === 0 ||
-      !finalLeaderboard ||
-      finalLeaderboard.length === 0
-    ))
-  ) {
-    return (
-      <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading final results...</div>
-      </div>
-    );
-  }
+  // Create a fallback for multiplayer detection
+  const finalIsMultiplayer = isMultiplayer || Object.keys(mpScores).length > 0 || sessionId !== null;
 
   return (
     <Leaderboard
       quiz={quiz}
-      isMultiplayer={isMultiplayer}
+      isMultiplayer={finalIsMultiplayer}
       mpLeaderboard={finalLeaderboard}
-      mpScores={isMultiplayer ? mpScores : {}}
+      mpScores={mpScores}
       nickname={nickname}
       spScore={spScore}
       onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}
