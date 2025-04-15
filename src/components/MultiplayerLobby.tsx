@@ -128,7 +128,7 @@ export default function MultiplayerLobby({
                         { joinedAt: serverTimestamp() },
                         { merge: true }
                       );
-                      setPlayers((prev: string[]) => [...prev, nickname]);
+                      setPlayers((prev: string[]) => [...new Set([...prev, nickname])]); // Use Set to prevent duplicates
                       // Persist nickname and isOrganizer in localStorage for multiplayer game page
                       if (typeof window !== "undefined") {
                         localStorage.setItem("mp_nickname", nickname);
