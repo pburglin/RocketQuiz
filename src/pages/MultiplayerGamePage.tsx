@@ -2,13 +2,44 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerSession from "../components/MultiplayerSession";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp } from "firebase/firestore"; // Import Timestamp
+// Define the structure of an answer document
+interface AnswerData {
+  nickname: string;
+  qIdx: number;
+  answer: number;
+  answeredAt: Timestamp; // Use Timestamp type
+  isCorrect: boolean;
+  questionStart?: Timestamp | null; // Optional Timestamp
+}
+
 
 export default function MultiplayerGamePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<any>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
+// Define Quiz structure
+interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  questionCount: number;
+  // Add other relevant quiz fields if needed
+}
+
+// Define Question structure (including answers)
+interface Question {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  image?: string; // Optional image URL
+  time: number;
+}
+
+  const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz type
+  const [questions, setQuestions] = useState<Question[]>([]); // Use Question type
   const [current, setCurrent] = useState(0);
   const [isOrganizer, setIsOrganizer] = useState(() => {
     if (typeof window !== "undefined") {
@@ -20,7 +51,7 @@ export default function MultiplayerGamePage() {
   const [mpShowAnswer, setMpShowAnswer] = useState(false);
   const [mpTimer, setMpTimer] = useState(0);
   const [mpAnswered, setMpAnswered] = useState(false);
-  const [mpAllAnswers, setMpAllAnswers] = useState<any[]>([]);
+  const [mpAllAnswers, setMpAllAnswers] = useState<AnswerData[]>([]); // Use AnswerData type
   const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
   const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
   const [mpSelected, setMpSelected] = useState<number | null>(null);
@@ -42,10 +73,10 @@ export default function MultiplayerGamePage() {
       if (!id) return;
       const quizDoc = await getDoc(doc(db, "quizzes", id));
       if (quizDoc.exists()) {
-        setQuiz({ id: quizDoc.id, ...quizDoc.data() });
+        setQuiz({ id: quizDoc.id, ...quizDoc.data() } as Quiz); // Cast to Quiz type
       }
       const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-      const questionsArr: any[] = [];
+      const questionsArr: Question[] = []; // Use Question type
       for (const qDoc of questionsSnap.docs) {
         const qData = qDoc.data();
         const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
@@ -54,14 +85,16 @@ export default function MultiplayerGamePage() {
           const aData = aDoc.data();
           answersArr[aData.index] = aData.answer;
         });
-        questionsArr.push({
+        // Ensure data matches Question interface
+        const questionData: Question = {
           id: qDoc.id,
           question: qData.question,
           answers: answersArr,
           correctAnswer: qData.correctAnswer,
           image: qData.image,
           time: typeof qData.time === "number" ? qData.time : 30,
-        });
+        };
+        questionsArr.push(questionData);
       }
       setQuestions(questionsArr);
       setMpTimer(questionsArr[0]?.time || 30);
@@ -193,7 +226,7 @@ export default function MultiplayerGamePage() {
     const answersRef = collection(db, "sessions", sessionId, "answers");
     const unsub = onSnapshot(answersRef, (snap) => {
       const allAnswers = snap.docs
-        .map((doc) => ({ nickname: doc.id, ...(doc.data() as any) }))
+        .map((doc) => doc.data() as AnswerData) // Use AnswerData type
         .filter((a) => typeof a.qIdx === "number" && a.qIdx === current);
       setMpAllAnswers(allAnswers);
       // If all players have answered, show answer and start next question timer
@@ -300,17 +333,17 @@ export default function MultiplayerGamePage() {
           // sessions/{sessionId}/answers/{nickname}
           // with fields: qIdx, answer, answeredAt
           const answersSnap = await getDocs(collection(db, "sessions", sessionId, "answers"));
-          const allAnswers = answersSnap.docs.map((doc) => ({
-            nickname: doc.id,
-            ...(doc.data() as any)
-          }));
+          // Map documents to AnswerData type
+          const allAnswers: AnswerData[] = answersSnap.docs.map((doc) => {
+            return doc.data() as AnswerData; // Cast data to our defined type
+          });
           
           console.log("Retrieved answers:", allAnswers);
           
           // Fetch session for questionStart times
           const sessionRef = doc(db, "sessions", sessionId);
           const sessionSnap = await getDoc(sessionRef);
-          let scores: { [nickname: string]: number } = {};
+          const scores: { [nickname: string]: number } = {}; // Use const
           let leaderboard: string[] = [];
           if (sessionSnap.exists()) {
             // For each question, get questionStart
@@ -318,12 +351,16 @@ export default function MultiplayerGamePage() {
             const questionsStart: { [qIdx: number]: number } = {};
             // Check both field names for backward compatibility
             if (sessionData.questionStartTimes) {
-              Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]: [string, any]) => {
-                if (ts?.toMillis) questionsStart[Number(qIdx)] = ts.toMillis();
+              Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]) => { // Remove explicit type annotation
+                if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
+                  questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
+                }
               });
             } else if (sessionData.questionStarts) {
-              Object.entries(sessionData.questionStarts).forEach(([qIdx, ts]: [string, any]) => {
-                if (ts?.toMillis) questionsStart[Number(qIdx)] = ts.toMillis();
+              Object.entries(sessionData.questionStarts).forEach(([qIdx, ts]) => { // Remove explicit type annotation
+                 if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
+                   questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
+                 }
               });
             }
             // Calculate scores
@@ -335,7 +372,7 @@ export default function MultiplayerGamePage() {
             });
             
             // Process each answer
-            allAnswers.forEach((a) => {
+            allAnswers.forEach((a: AnswerData) => { // Use AnswerData type for 'a'
               console.log("Processing answer:", a);
               
               // For each question the player answered
@@ -479,8 +516,11 @@ export default function MultiplayerGamePage() {
           }
           
           // Write answer to Firestore
-          const answerRef = doc(db, "sessions", sessionId, "answers", nickname);
-          await setDoc(answerRef, {
+          // Create a reference to the 'answers' subcollection
+          const answersCollectionRef = collection(db, "sessions", sessionId, "answers");
+          // Add a new document for this answer, including the nickname
+          await addDoc(answersCollectionRef, {
+            nickname: nickname, // Store the nickname within the answer document
             qIdx: current,
             answer: idx,
             answeredAt: serverTimestamp(),
