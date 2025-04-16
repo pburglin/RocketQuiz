@@ -1,4 +1,4 @@
-import { LogIn, User, Rocket, Search } from "lucide-react";
+import { LogIn, User, Rocket, Search, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebaseClient";
@@ -23,7 +23,8 @@ export default function Navbar({ user }: { user?: { name: string } }) {
             to="/create-quiz"
             className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
           >
-            <span className="hidden sm:inline">Create</span>
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">Create</span>
           </Link>
           {user ? (
             <div className="flex items-center gap-2">
