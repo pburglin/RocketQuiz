@@ -10,14 +10,14 @@ type HomeProps = {
 
 export default function Home({ user }: HomeProps) {
   return (
-    <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-100 min-h-screen flex flex-col">
+    <div className="bg-gradient-to-br from-secondary/20 via-base-100 to-accent/20 min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 pt-20">
         {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-8 py-16 flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1">
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4 flex items-center gap-3">
-              <Rocket className="w-10 h-10 text-emerald-500" />
+              <Rocket className="w-10 h-10 text-primary" />
               RocketQuiz
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 mb-6">
@@ -26,14 +26,14 @@ export default function Home({ user }: HomeProps) {
             <div className="flex gap-4">
               <a
                 href="/search"
-                className="px-6 py-3 rounded-lg bg-emerald-500 text-white font-semibold text-lg shadow hover:bg-emerald-600 transition"
+                className="px-6 py-3 rounded-lg bg-primary text-white font-semibold text-lg shadow hover:bg-accent transition"
               >
                 Discover Quizzes
               </a>
               {!user && (
                 <a
                   href="/register"
-                  className="px-6 py-3 rounded-lg bg-white border border-emerald-500 text-emerald-600 font-semibold text-lg shadow hover:bg-emerald-50 transition"
+                  className="px-6 py-3 rounded-lg bg-secondary text-primary font-semibold text-lg shadow hover:bg-accent transition"
                 >
                   Create Account
                 </a>

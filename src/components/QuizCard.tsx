@@ -22,7 +22,7 @@ export default function QuizCard({
   return (
     <Link
       to={`/play/quiz/${quiz.id}/details`}
-      className="min-w-[300px] max-w-xs bg-white rounded-xl shadow-lg hover:shadow-2xl transition flex flex-col overflow-hidden border border-gray-100"
+      className="min-w-[300px] max-w-xs bg-base-100 rounded-xl shadow-lg hover:shadow-2xl transition flex flex-col overflow-hidden border border-accent"
     >
       {quiz.image && quiz.image.trim() !== "" ? (
         <img
@@ -39,7 +39,7 @@ export default function QuizCard({
         />
       )}
       <div className="p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-lg text-gray-800 mb-1">{quiz.title}</h3>
+        <h3 className="font-semibold text-lg text-primary mb-1">{quiz.title}</h3>
         
         {/* Display star rating if available */}
         {quiz.averageRating !== undefined && (
@@ -60,7 +60,7 @@ export default function QuizCard({
           {quiz.tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent text-white rounded text-xs font-medium"
             >
               <Tag className="w-3 h-3" />
               {tag}
@@ -72,7 +72,7 @@ export default function QuizCard({
           <span className="text-xs text-gray-600 font-medium text-center flex-1">
             {typeof quiz.questionCount === "number" ? `${quiz.questionCount} Questions` : ""}
           </span>
-          <span className="text-xs text-emerald-500 font-bold">
+          <span className="text-xs text-primary font-bold">
             {typeof quiz.popularity === "number" && !isNaN(quiz.popularity)
               ? `${quiz.popularity}% Popular`
               : "0% Popular"}

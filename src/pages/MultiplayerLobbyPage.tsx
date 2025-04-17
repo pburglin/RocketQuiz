@@ -2,12 +2,21 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerLobby from "../components/MultiplayerLobby";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+// Remove unused getDocs import
+import { collection, doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+
+// Basic Quiz interface for type safety
+interface Quiz {
+  id: string;
+  title: string;
+  // Add other relevant fields if needed
+  [key: string]: unknown;
+}
 
 export default function MultiplayerLobbyPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<any>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz interface
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [nickname, setNickname] = useState<string>(() => {
@@ -40,7 +49,9 @@ export default function MultiplayerLobbyPage() {
       if (!id) return;
       const quizDoc = await getDoc(doc(db, "quizzes", id));
       if (quizDoc.exists()) {
-        setQuiz({ id: quizDoc.id, ...quizDoc.data() });
+        const data = quizDoc.data();
+        // Ensure title exists and cast correctly
+        setQuiz({ id: quizDoc.id, title: data.title || "Untitled Quiz", ...data } as Quiz);
       }
     }
     fetchQuiz();
@@ -107,7 +118,7 @@ export default function MultiplayerLobbyPage() {
   if (!quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading quiz...</div>
+        <div className="text-lg text-primary">Loading quiz...</div>
       </div>
     );
   }

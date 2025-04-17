@@ -1,13 +1,56 @@
 import React from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 
+// Define interfaces for props
+interface Quiz {
+  id: string;
+  title: string;
+  tags?: string[];
+  language?: string;
+  [key: string]: unknown;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  image?: string;
+  time: number;
+}
+
+interface SinglePlayerSessionProps {
+  quiz: Quiz | null;
+  questions: Question[];
+  current: number;
+  setCurrent: React.Dispatch<React.SetStateAction<number>>;
+  timer: number;
+  // setTimer: React.Dispatch<React.SetStateAction<number>>; // Remove unused prop
+  showAnswer: boolean;
+  setShowAnswer: React.Dispatch<React.SetStateAction<boolean>>;
+  spScore: number;
+  setSpScore: React.Dispatch<React.SetStateAction<number>>;
+  spCorrectAnswers: number;
+  setSpCorrectAnswers: React.Dispatch<React.SetStateAction<number>>;
+  spCurrentSpeedBonus: number;
+  setSpCurrentSpeedBonus: React.Dispatch<React.SetStateAction<number>>;
+  spSelected: number | null;
+  setSpSelected: React.Dispatch<React.SetStateAction<number | null>>;
+  nextQuestionTimer: number | null;
+  setNextQuestionTimer: React.Dispatch<React.SetStateAction<number | null>>;
+  timerRef: React.MutableRefObject<NodeJS.Timeout | null>; // Correct type
+  onQuit: () => void;
+  onFinish: () => void;
+}
+
+
 export default function SinglePlayerSession({
   quiz,
   questions,
   current,
   setCurrent,
   timer,
-  setTimer,
+  //setTimer, // Remove unused prop
   showAnswer,
   setShowAnswer,
   spScore,
@@ -23,29 +66,7 @@ export default function SinglePlayerSession({
   timerRef,
   onQuit,
   onFinish,
-}: {
-  quiz: any;
-  questions: any[];
-  current: number;
-  setCurrent: React.Dispatch<React.SetStateAction<number>>;
-  timer: number;
-  setTimer: React.Dispatch<React.SetStateAction<number>>;
-  showAnswer: boolean;
-  setShowAnswer: React.Dispatch<React.SetStateAction<boolean>>;
-  spScore: number;
-  setSpScore: React.Dispatch<React.SetStateAction<number>>;
-  spCorrectAnswers: number;
-  setSpCorrectAnswers: React.Dispatch<React.SetStateAction<number>>;
-  spCurrentSpeedBonus: number;
-  setSpCurrentSpeedBonus: React.Dispatch<React.SetStateAction<number>>;
-  spSelected: number | null;
-  setSpSelected: React.Dispatch<React.SetStateAction<number | null>>;
-  nextQuestionTimer: number | null;
-  setNextQuestionTimer: React.Dispatch<React.SetStateAction<number | null>>;
-  timerRef: React.MutableRefObject<any>;
-  onQuit: () => void;
-  onFinish: () => void;
-}) {
+}: SinglePlayerSessionProps) { // Use the defined interface
 
   // Reset correctAnswers when starting a new game (when current is 0 and not showing answer)
   React.useEffect(() => {
@@ -92,30 +113,30 @@ export default function SinglePlayerSession({
   if (!q) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">No question data available.</div>
+        <div className="text-lg text-primary">No question data available.</div>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">{quiz?.title}</h1>
+      <h1 className="text-2xl font-bold mb-2 text-primary">{quiz?.title}</h1>
       <div className="mb-2 flex flex-wrap gap-2">
         {quiz?.tags?.map((tag: string) => (
           <span
             key={tag}
-            className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
+            className="inline-block bg-accent text-white px-2 py-0.5 rounded text-xs"
           >
             {tag}
           </span>
         ))}
         {quiz?.language && (
-          <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
+          <span className="inline-block bg-secondary text-primary px-2 py-0.5 rounded text-xs font-medium">
             {quiz.language}
           </span>
         )}
       </div>
-      <div className="mt-6 mb-2 text-lg font-semibold">
+      <div className="mt-6 mb-2 text-lg font-semibold text-primary">
         Question {current + 1} of {questions.length}
       </div>
       {q.image && q.image.trim() !== "" ? (
@@ -133,7 +154,7 @@ export default function SinglePlayerSession({
       )}
       <div className="mb-1 font-bold">{q.question}</div>
       <div className="mb-2">
-        <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
+        <span className="inline-block bg-secondary text-primary px-3 py-1 rounded text-sm font-medium">
           Time left: {timer} second{timer !== 1 ? "s" : ""}
         </span>
       </div>
@@ -145,11 +166,11 @@ export default function SinglePlayerSession({
               ${
                 showAnswer
                   ? idx === q.correctAnswer
-                    ? "bg-green-200 border-green-400 font-bold"
+                    ? "bg-success/30 border-success font-bold" // Correct answer shown
                     : idx === spSelected
-                    ? "bg-red-100 border-gray-200"
-                    : "bg-white border-gray-200"
-                  : "bg-white border-gray-200 hover:bg-emerald-50"
+                    ? "bg-error/20 border-error" // Incorrect selected answer shown
+                    : "bg-base-100 border-neutral opacity-60" // Other incorrect answers shown
+                  : "bg-base-100 border-neutral hover:bg-secondary/20" // Default answer
               }
             `}
             disabled={showAnswer}
@@ -157,10 +178,10 @@ export default function SinglePlayerSession({
           >
             {answer}
             {showAnswer && idx === q.correctAnswer && (
-              <span className="ml-2 text-green-700 font-bold">(Correct)</span>
+              <span className="ml-2 text-success font-bold">(Correct)</span>
             )}
             {showAnswer && idx === spSelected && idx !== q.correctAnswer && (
-              <span className="ml-2 text-red-700 font-bold">(Your pick)</span>
+              <span className="ml-2 text-error font-bold">(Your pick)</span>
             )}
           </button>
         ))}
@@ -171,13 +192,13 @@ export default function SinglePlayerSession({
         </div>
       )}
       {showAnswer && (
-        <div className="mb-4 text-center text-green-700 font-semibold">
+        <div className="mb-4 text-center text-success font-semibold">
           Correct answer shown!{" "}
           {current < questions.length - 1 ? "Click Next to continue." : "Quiz complete."}
         </div>
       )}
       {/* Show score after each question */}
-      <div className="mb-4 text-center text-blue-700 font-bold">
+      <div className="mb-4 text-center text-accent font-bold">
         <div className="text-2xl">Score: {spScore}</div>
         {showAnswer && spSelected === q.correctAnswer && (
           <div className="text-sm text-gray-600">
@@ -187,14 +208,14 @@ export default function SinglePlayerSession({
       </div>
       <div className="flex justify-between">
         <button
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+          className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
           onClick={onQuit}
         >
           Quit
         </button>
         {showAnswer && current < questions.length - 1 && (
           <button
-            className="px-4 py-2 bg-emerald-600 text-white rounded"
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-accent transition"
             onClick={() => {
               setCurrent(current + 1);
               setShowAnswer(false);
@@ -206,7 +227,7 @@ export default function SinglePlayerSession({
         )}
         {showAnswer && current === questions.length - 1 && (
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-4 py-2 bg-accent text-white rounded hover:bg-blue-700 transition"
             onClick={() => {
               console.log("[SinglePlayerSession] onFinish (last question)");
               onFinish();

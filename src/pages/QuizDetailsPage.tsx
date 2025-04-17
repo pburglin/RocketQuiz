@@ -112,7 +112,7 @@ export default function QuizDetailsPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading quiz...</div>
+        <div className="text-lg text-primary">Loading quiz...</div>
       </div>
     );
   }
@@ -120,9 +120,9 @@ export default function QuizDetailsPage() {
   if (error || !quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-red-600">{error || "Quiz not found."}</div>
+        <div className="text-lg text-error">{error || "Quiz not found."}</div>
         <button
-          className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded"
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-accent transition"
           onClick={() => navigate("/search")}
         >
           Back to Search

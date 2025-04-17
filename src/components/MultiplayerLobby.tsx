@@ -5,6 +5,35 @@ import { db } from "../firebaseClient";
 import { doc, setDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { UserAvatar } from "./index";
 
+// Define interfaces for props
+interface Quiz {
+  id: string;
+  title: string;
+  [key: string]: unknown;
+}
+
+interface MultiplayerLobbyProps {
+  quiz: Quiz | null;
+  sessionId: string | null;
+  sessionUrl: string;
+  nickname: string;
+  setNickname: (n: string) => void;
+  nicknameError: string | null;
+  setNicknameError: (e: string | null) => void;
+  players: string[];
+  isOrganizer: boolean;
+  lobbyLoading: boolean;
+  setLobbyLoading: (l: boolean) => void;
+  setSessionId: (s: string | null) => void;
+  setSessionUrl: (u: string) => void;
+  setPlayers: (p: string[] | ((prev: string[]) => string[])) => void;
+  setIsOrganizer: (o: boolean) => void;
+  setGameState: (g: unknown) => void; // Use unknown instead of any
+  onBackToQuizDetails: () => void;
+  onStartGame: () => void;
+}
+
+
 export default function MultiplayerLobby({
   quiz,
   sessionId,
@@ -16,15 +45,11 @@ export default function MultiplayerLobby({
   players,
   isOrganizer,
   lobbyLoading,
-  setLobbyLoading,
-  setSessionId,
-  setSessionUrl,
+  // Remove unused props: setLobbyLoading, setSessionId, setSessionUrl, setIsOrganizer, setGameState
   setPlayers,
-  setIsOrganizer,
-  setGameState,
   onBackToQuizDetails,
   onStartGame,
-}: any) {
+}: MultiplayerLobbyProps) { // Use the defined interface
   // State for "Copied" tooltip
   const [copied, setCopied] = useState(false);
 
@@ -37,9 +62,9 @@ export default function MultiplayerLobby({
   if (!quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Quiz not found.</div>
+        <div className="text-lg text-primary">Quiz not found.</div>
         <button
-          className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded"
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-accent transition"
           onClick={onBackToQuizDetails}
         >
           Back to Quiz Details
@@ -50,23 +75,23 @@ export default function MultiplayerLobby({
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
+      <h1 className="text-2xl font-bold mb-2 text-primary">{quiz.title}</h1>
       <div className="mb-4 text-gray-600">Multiplayer Lobby</div>
       {lobbyLoading ? (
-        <div className="text-lg text-gray-700">Setting up session...</div>
+        <div className="text-lg text-primary">Setting up session...</div>
       ) : (
         <>
           <div className="mb-4">
             <div className="font-semibold">Session URL:</div>
             <div className="flex items-center gap-2 relative">
               <input
-                className="w-full px-2 py-1 border rounded"
+                className="w-full px-2 py-1 border border-neutral rounded bg-base-100"
                 value={sessionUrl}
                 readOnly
                 onFocus={(e) => e.target.select()}
               />
               <button
-                className="px-2 py-1 bg-gray-200 rounded"
+                className="px-2 py-1 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
                 onClick={() => {
                   navigator.clipboard.writeText(sessionUrl);
                   setCopied(true);
@@ -98,7 +123,7 @@ export default function MultiplayerLobby({
             )}
             <div className="flex items-center gap-2">
               <input
-                className="px-2 py-1 border rounded w-full"
+                className="px-2 py-1 border border-neutral rounded w-full bg-base-100"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 maxLength={20}
@@ -108,7 +133,7 @@ export default function MultiplayerLobby({
                 className={`px-4 py-1 rounded transition-colors ${
                   players.includes(nickname)
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-primary text-white hover:bg-accent"
                 }`}
                 disabled={
                   !nickname ||
@@ -134,7 +159,7 @@ export default function MultiplayerLobby({
                         localStorage.setItem("mp_nickname", nickname);
                         localStorage.setItem("mp_isOrganizer", isOrganizer ? "true" : "false");
                       }
-                    } catch (err) {
+                    } catch { // Remove unused 'err' variable
                       setNicknameError("Failed to join lobby. Please try again.");
                     }
                   }
@@ -144,14 +169,14 @@ export default function MultiplayerLobby({
               </button>
             </div>
             {nicknameError && (
-              <div className="text-red-600 text-sm mt-1">{nicknameError}</div>
+              <div className="text-error text-sm mt-1">{nicknameError}</div>
             )}
           </div>
           <div className="mb-4">
             <div className="font-semibold mb-1">Players in lobby:</div>
             <ul className="space-y-2">
               {players.map((p: string) => (
-                <li key={p} className={`flex items-center justify-between ${p === nickname ? "font-bold text-emerald-700" : ""}`}>
+                <li key={p} className={`flex items-center justify-between ${p === nickname ? "font-bold text-primary" : ""}`}>
                   <div className="flex items-center">
                     <UserAvatar username={p} size="md" />
                     <span className="ml-2">{p}</span>
@@ -160,7 +185,7 @@ export default function MultiplayerLobby({
                   </div>
                   {isOrganizer && p !== nickname && (
                     <button
-                      className="px-2 py-0.5 bg-red-500 text-white rounded text-xs"
+                      className="px-2 py-0.5 bg-error text-white rounded text-xs hover:bg-red-700 transition"
                       onClick={async () => {
                         // Firestore logic to remove player
                         if (sessionId && p) {
@@ -177,7 +202,7 @@ export default function MultiplayerLobby({
           </div>
           {isOrganizer && (
             <button
-              className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
+              className="px-6 py-2 bg-secondary text-primary rounded font-bold hover:bg-accent disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition"
               disabled={players.length < 1}
               onClick={onStartGame}
             >
@@ -186,7 +211,7 @@ export default function MultiplayerLobby({
           )}
           <div className="mt-6">
             <button
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+              className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
               onClick={onBackToQuizDetails}
             >
               Back to Quiz Details

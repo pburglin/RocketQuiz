@@ -25,6 +25,9 @@ interface Quiz {
   category: string;
   difficulty: string;
   questionCount: number;
+  tags?: string[]; // Add optional tags
+  image?: string; // Add optional image
+  language?: string; // Add optional language
   // Add other relevant quiz fields if needed
 }
 
@@ -306,7 +309,7 @@ interface Question {
   if (!quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading quiz...</div>
+        <div className="text-lg text-primary">Loading quiz...</div>
       </div>
     );
   }

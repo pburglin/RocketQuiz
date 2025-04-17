@@ -7,8 +7,22 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 export default function SinglePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<any>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
+  // Define interfaces
+  interface Quiz {
+    id: string;
+    title: string;
+    [key: string]: unknown;
+  }
+  interface Question {
+    id: string;
+    question: string;
+    answers: string[];
+    correctAnswer: number;
+    image?: string;
+    time: number;
+  }
+  const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz type
+  const [questions, setQuestions] = useState<Question[]>([]); // Use Question type
   const [current, setCurrent] = useState(0);
   const [timer, setTimer] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,11 +73,12 @@ export default function SinglePlayerPage() {
         const quizData = quizDoc.data();
         setQuiz({
           id: quizDoc.id,
+          title: quizData.title || "Untitled Quiz", // Ensure title exists
           ...quizData,
-        });
+        } as Quiz); // Cast to Quiz type
 
         const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-        const questionsArr: any[] = [];
+        const questionsArr: Question[] = []; // Use Question type
         for (const qDoc of questionsSnap.docs) {
           const qData = qDoc.data();
           const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
@@ -83,7 +98,7 @@ export default function SinglePlayerPage() {
         }
         setQuestions(questionsArr);
         setTimer(questionsArr[0]?.time || 30);
-      } catch (err) {
+      } catch { // Remove unused err
         setError("Failed to load quiz.");
       } finally {
         setLoading(false);
@@ -117,10 +132,22 @@ export default function SinglePlayerPage() {
     };
   }, [current, questions]);
 
+  // Next question countdown logic
+  useEffect(() => {
+    if (!showAnswer || nextQuestionTimer === null || nextQuestionTimer <= 0) return;
+
+    const countdownTimer = setTimeout(() => {
+      setNextQuestionTimer((t) => (t !== null ? Math.max(0, t - 1) : null));
+    }, 1000);
+
+    return () => clearTimeout(countdownTimer);
+  }, [nextQuestionTimer, showAnswer]);
+
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading quiz...</div>
+        <div className="text-lg text-primary">Loading quiz...</div>
       </div>
     );
   }
@@ -128,9 +155,9 @@ export default function SinglePlayerPage() {
   if (error || !quiz) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-red-600">{error || "Quiz not found."}</div>
+        <div className="text-lg text-error">{error || "Quiz not found."}</div>
         <button
-          className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded"
+          className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-accent transition"
           onClick={() => navigate("/search")}
         >
           Back to Search
@@ -146,7 +173,7 @@ export default function SinglePlayerPage() {
       current={current}
       setCurrent={setCurrent}
       timer={timer}
-      setTimer={setTimer}
+      //setTimer={setTimer} // Remove unused prop
       showAnswer={showAnswer}
       setShowAnswer={setShowAnswer}
       spScore={spScore}

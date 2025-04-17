@@ -1,67 +1,134 @@
 import React from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import { UserAvatar } from "./index";
+import { Timestamp } from "firebase/firestore"; // Import Timestamp
+
+// Define interfaces for props
+interface Quiz {
+  id: string;
+  title: string;
+  description?: string; // Make optional
+  tags?: string[]; // Make optional
+  image?: string; // Make optional
+  popularity?: number;
+  language?: string; // Make optional
+  averageRating?: number;
+  ratingCount?: number;
+  questionCount?: number;
+  [key: string]: unknown;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  image?: string;
+  time: number;
+}
+
+interface AnswerData {
+  nickname: string;
+  qIdx: number;
+  answer: number;
+  answeredAt: Timestamp;
+  isCorrect: boolean;
+  questionStart?: Timestamp | null;
+}
+
+interface MultiplayerSessionProps {
+  quiz: Quiz | null;
+  questions: Question[];
+  current: number;
+  setCurrent: (c: number) => void;
+  mpShowAnswer: boolean;
+  setMpShowAnswer: (s: boolean) => void;
+  mpTimer: number;
+  setMpTimer: (t: number) => void;
+  mpAnswered: boolean;
+  setMpAnswered: (a: boolean) => void;
+  mpAllAnswers: AnswerData[];
+  setMpAllAnswers: (a: AnswerData[]) => void;
+  mpScores: { [nickname: string]: number };
+  setMpScores: (s: { [nickname: string]: number }) => void;
+  mpLeaderboard: string[];
+  setMpLeaderboard: (l: string[]) => void;
+  mpSelected: number | null;
+  setMpSelected: (s: number | null) => void;
+  nextQuestionTimer: number | null;
+  setNextQuestionTimer: (t: number | null) => void;
+  timerRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  players: string[];
+  nickname: string;
+  sessionId: string | null;
+  submitMpAnswer: (idx: number) => Promise<void>;
+  onQuit?: () => void; // Make optional if not always provided
+  onFinish: () => Promise<void>;
+  isOrganizer: boolean;
+}
+
 
 export default function MultiplayerSession({
+  // Destructure only the needed props, removing duplicates and unused ones
   quiz,
   questions,
   current,
-  setCurrent,
+  // setCurrent, // Unused
   mpShowAnswer,
-  setMpShowAnswer,
+  // setMpShowAnswer, // Unused
   mpTimer,
-  setMpTimer,
+  // setMpTimer, // Unused
   mpAnswered,
-  setMpAnswered,
+  // setMpAnswered, // Unused
   mpAllAnswers,
-  setMpAllAnswers,
-  mpScores,
-  setMpScores,
-  mpLeaderboard,
-  setMpLeaderboard,
+  // setMpAllAnswers, // Unused
+  // mpScores, // Unused
+  // setMpScores, // Unused
+  // mpLeaderboard, // Unused
+  // setMpLeaderboard, // Unused
   mpSelected,
-  setMpSelected,
+  // setMpSelected, // Unused
   nextQuestionTimer,
-  setNextQuestionTimer,
-  timerRef,
+  // setNextQuestionTimer, // Unused
+  // timerRef, // Unused
   players,
   nickname,
-  sessionId,
+  // sessionId, // Unused
   submitMpAnswer,
   onQuit,
   onFinish,
   isOrganizer,
-}: any) {
+}: MultiplayerSessionProps) { // Use the defined interface
   const q = questions.length > 0 ? questions[current] : null;
   const isLastQuestion = current === questions.length - 1;
 
   if (!q) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-lg text-gray-700">Loading questions, get ready!</div>
+        <div className="text-lg text-primary">Loading questions, get ready!</div>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">{quiz?.title}</h1>
+      <h1 className="text-2xl font-bold mb-2 text-primary">{quiz?.title}</h1>
       <div className="mb-2 flex flex-wrap gap-2">
         {quiz?.tags?.map((tag: string) => (
           <span
             key={tag}
-            className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
+            className="inline-block bg-accent text-white px-2 py-0.5 rounded text-xs"
           >
             {tag}
           </span>
         ))}
         {quiz?.language && (
-          <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
+          <span className="inline-block bg-secondary text-primary px-2 py-0.5 rounded text-xs font-medium">
             {quiz.language}
           </span>
         )}
       </div>
-      <div className="mt-6 mb-2 text-lg font-semibold">
+      <div className="mt-6 mb-2 text-lg font-semibold text-primary">
         Question {current + 1} of {questions.length}
       </div>
       {q.image && q.image.trim() !== "" ? (
@@ -79,7 +146,7 @@ export default function MultiplayerSession({
       )}
       <div className="mb-1 font-bold">{q.question}</div>
       <div className="mb-2">
-        <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">
+        <span className="inline-block bg-secondary text-primary px-3 py-1 rounded text-sm font-medium">
           Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
         </span>
       </div>
@@ -91,11 +158,11 @@ export default function MultiplayerSession({
               ${
                 mpShowAnswer
                   ? idx === q.correctAnswer
-                    ? "bg-green-200 border-green-400 font-bold"
-                    : "bg-red-100 border-gray-200"
+                    ? "bg-success/30 border-success font-bold" // Correct answer shown
+                    : "bg-error/20 border-error" // Incorrect answer shown
                   : mpSelected === idx
-                  ? "bg-emerald-100 border-emerald-400"
-                  : "bg-white border-gray-200 hover:bg-emerald-50"
+                  ? "bg-secondary/50 border-secondary" // Selected answer
+                  : "bg-base-100 border-neutral hover:bg-secondary/20" // Default answer
               }
             `}
             disabled={mpShowAnswer || mpAnswered || (isOrganizer && !players.includes(nickname))}
@@ -103,13 +170,14 @@ export default function MultiplayerSession({
             style={{
               opacity: (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? 0.5 : 1,
               pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? "none" : "auto",
-              borderWidth: mpSelected === idx ? 3 : undefined,
-              borderColor: mpSelected === idx ? "#059669" : undefined, // emerald-600
+              borderWidth: mpSelected === idx || (mpShowAnswer && idx === q.correctAnswer) ? 3 : 1, // Thicker border for selected/correct
+              // Use theme colors for border
+              borderColor: mpShowAnswer ? (idx === q.correctAnswer ? 'var(--color-success)' : 'var(--color-error)') : (mpSelected === idx ? 'var(--color-secondary)' : 'var(--color-neutral)')
             }}
           >
             {answer}
             {mpShowAnswer && idx === q.correctAnswer && (
-              <span className="ml-2 text-green-700 font-bold">(Correct)</span>
+              <span className="ml-2 text-success font-bold">(Correct)</span>
             )}
           </button>
         ))}
@@ -122,10 +190,10 @@ export default function MultiplayerSession({
           <div className="mt-2 flex flex-col items-center">
             <div className="font-semibold text-sm mb-1">Answered:</div>
             <ul className="text-xs">
-              {mpAllAnswers.map((a: any, i: number) => (
+              {mpAllAnswers.map((a: AnswerData, i: number) => ( // Use AnswerData type
                 <li key={a.nickname} className="flex items-center mb-1">
                   <UserAvatar username={a.nickname} size="sm" />
-                  <span className={`ml-1 ${a.nickname === nickname ? "font-bold text-emerald-700" : ""}`}>
+                  <span className={`ml-1 ${a.nickname === nickname ? "font-bold text-primary" : ""}`}>
                     {i + 1}. {a.nickname}
                   </span>
                   {a.nickname === nickname && " (You)"}
@@ -136,7 +204,7 @@ export default function MultiplayerSession({
         </div>
       )}
       {mpShowAnswer && (
-        <div className="mb-4 text-center text-green-700 font-semibold">
+        <div className="mb-4 text-center text-success font-semibold">
           Correct answer shown!{" "}
           {isLastQuestion
             ? "Quiz complete."
@@ -147,7 +215,7 @@ export default function MultiplayerSession({
         </div>
       )}
       {isOrganizer && !players.includes(nickname) && (
-        <div className="mb-4 text-center text-blue-700 font-semibold">
+        <div className="mb-4 text-center text-accent font-semibold">
           You are managing this game as the organizer (not playing).
         </div>
       )}
@@ -159,7 +227,7 @@ export default function MultiplayerSession({
             {players
               .map((nick: string) => {
                 // Find this player's answer for the current question
-                const ans = mpAllAnswers.find((a: any) => a.nickname === nick && a.qIdx === current);
+                const ans = mpAllAnswers.find((a: AnswerData) => a.nickname === nick && a.qIdx === current); // Use AnswerData type
                 let points = 0;
                 let speedBonus = 0;
                 if (ans && ans.answer === q.correctAnswer && typeof ans.answeredAt?.toMillis === "function" && q.time) {
@@ -186,7 +254,7 @@ export default function MultiplayerSession({
                 return b.points - a.points;
               })
               .map((item: { nick: string; points: number; speedBonus: number }, i: number) => (
-                <li key={item.nick} className={`flex items-center mb-1 ${item.nick === nickname ? "font-bold text-emerald-700" : ""}`}>
+                <li key={item.nick} className={`flex items-center mb-1 ${item.nick === nickname ? "font-bold text-primary" : ""}`}>
                   <UserAvatar username={item.nick} size="sm" />
                   <span className="ml-2">
                     {item.nick}: {item.points} pts
@@ -195,7 +263,7 @@ export default function MultiplayerSession({
                         ({item.speedBonus > 0 ? `1000 + ${item.speedBonus} speed bonus` : "1000 pts"})
                       </span>
                     )}
-                    {i === 0 && item.points > 0 && <span className="ml-1 text-yellow-600 font-bold">🏆</span>}
+                    {i === 0 && item.points > 0 && <span className="ml-1 text-secondary font-bold">🏆</span>}
                     {item.nick === nickname && " (You)"}
                   </span>
                 </li>
@@ -205,11 +273,9 @@ export default function MultiplayerSession({
       )}
       <div className="flex justify-between">
         <button
-          className={`px-4 py-2 rounded font-bold transition-colors ${
-            isOrganizer
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
+          className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
+          // Quit button logic might need adjustment based on whether organizer can quit etc.
+          // Keeping original disabled logic for now
           disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
           onClick={onQuit}
         >
@@ -219,7 +285,7 @@ export default function MultiplayerSession({
           <button
             className={`px-4 py-2 rounded font-bold transition-colors ${
               isOrganizer && mpShowAnswer
-                ? "bg-blue-600 text-white hover:bg-blue-700"
+                ? "bg-secondary text-primary hover:bg-accent"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
             disabled={!isOrganizer || !mpShowAnswer}
@@ -236,7 +302,7 @@ export default function MultiplayerSession({
           <button
             className={`px-4 py-2 rounded font-bold transition-colors ${
               isOrganizer && mpShowAnswer
-                ? "bg-blue-600 text-white hover:bg-blue-700"
+                ? "bg-secondary text-primary hover:bg-accent"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
             disabled={!isOrganizer || !mpShowAnswer}

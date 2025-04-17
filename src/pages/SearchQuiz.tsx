@@ -5,6 +5,20 @@ import { db } from "../firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
 
 
+// Define the Quiz type based on expected properties
+interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  image: string;
+  popularity?: number;
+  language: string;
+  averageRating?: number;
+  ratingCount?: number;
+  questionCount?: number;
+}
+
 const allTags = [
   "Geography",
   "World",
@@ -34,7 +48,7 @@ export default function SearchQuiz() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [popularity, setPopularity] = useState(0);
   const [minRating, setMinRating] = useState(0);
-  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]); // Use the Quiz interface
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gameLength, setGameLength] = useState(""); // "", "quick", "medium", "long"
@@ -49,8 +63,9 @@ export default function SearchQuiz() {
           id: doc.id,
           ...doc.data(),
         }));
-        setQuizzes(quizList);
-      } catch (err: any) {
+        setQuizzes(quizList as Quiz[]); // Cast the result
+      } catch (err: unknown) { // Use unknown for error type
+        console.error("Error fetching quizzes:", err); // Log the error
         setError("Failed to load quizzes.");
       } finally {
         setLoading(false);
@@ -98,16 +113,16 @@ export default function SearchQuiz() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 to-accent/20 px-4 py-8">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-          <Filter className="w-7 h-7 text-indigo-500" />
+        <h1 className="text-3xl font-bold mb-6 flex items-center gap-2 text-primary">
+          <Filter className="w-7 h-7 text-primary" />
           Search Quizzes
         </h1>
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           {/* Search Bar */}
-          <div className="flex-1 flex items-center bg-white rounded-lg shadow px-3 py-2">
-            <Search className="w-5 h-5 text-gray-400 mr-2" />
+          <div className="flex-1 flex items-center bg-base-100 rounded-lg shadow px-3 py-2 border border-neutral">
+            <Search className="w-5 h-5 text-primary mr-2" />
             <input
               type="text"
               className="w-full outline-none bg-transparent"
@@ -117,8 +132,8 @@ export default function SearchQuiz() {
             />
           </div>
           {/* Language Dropdown */}
-          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2">
-            <Globe className="w-5 h-5 text-gray-400 mr-2" />
+          <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 border border-neutral">
+            <Globe className="w-5 h-5 text-primary mr-2" />
             <select
               className="bg-transparent outline-none"
               value={selectedLanguage}
@@ -134,15 +149,15 @@ export default function SearchQuiz() {
         </div>
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           {/* Tags Multi-select */}
-          <div className="flex-1 flex items-center bg-white rounded-lg shadow px-3 py-2 flex-wrap gap-2">
-            <Tag className="w-5 h-5 text-gray-400 mr-2" />
+          <div className="flex-1 flex items-center bg-base-100 rounded-lg shadow px-3 py-2 flex-wrap gap-2 border border-neutral">
+            <Tag className="w-5 h-5 text-primary mr-2" />
             {allTags.map((tag) => (
               <button
                 key={tag}
                 className={`px-2 py-1 rounded-full text-sm border transition ${
                   selectedTags.includes(tag)
-                    ? "bg-indigo-500 text-white border-indigo-500"
-                    : "bg-slate-100 text-gray-700 border-slate-200 hover:bg-indigo-100"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-neutral text-gray-700 border-slate-200 hover:bg-secondary/50"
                 }`}
                 onClick={() =>
                   setSelectedTags((prev) =>
@@ -158,8 +173,8 @@ export default function SearchQuiz() {
             ))}
           </div>
           {/* Game Length Filter */}
-          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[260px]">
-            <span className="mr-2 text-gray-600 font-medium">Game Length:</span>
+          <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 min-w-[260px] border border-neutral">
+            <span className="mr-2 text-gray-600 font-medium">Quiz Length:</span>
             <div className="flex gap-2">
               <label className="flex items-center gap-1 text-sm">
                 <input
@@ -168,7 +183,7 @@ export default function SearchQuiz() {
                   value=""
                   checked={gameLength === ""}
                   onChange={() => setGameLength("")}
-                  className="accent-indigo-500"
+                  className="accent-primary"
                 />
                 Any
               </label>
@@ -179,7 +194,7 @@ export default function SearchQuiz() {
                   value="quick"
                   checked={gameLength === "quick"}
                   onChange={() => setGameLength("quick")}
-                  className="accent-indigo-500"
+                  className="accent-primary"
                 />
                 Quick {"(<10)"}
               </label>
@@ -190,7 +205,7 @@ export default function SearchQuiz() {
                   value="medium"
                   checked={gameLength === "medium"}
                   onChange={() => setGameLength("medium")}
-                  className="accent-indigo-500"
+                  className="accent-primary"
                 />
                 Medium {"(10-20)"}
               </label>
@@ -201,29 +216,29 @@ export default function SearchQuiz() {
                   value="long"
                   checked={gameLength === "long"}
                   onChange={() => setGameLength("long")}
-                  className="accent-indigo-500"
+                  className="accent-primary"
                 />
                 Long {">20"}
               </label>
             </div>
           </div>
           {/* Popularity Slider */}
-          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[200px]">
-            <ThumbsUp className="w-5 h-5 text-blue-500 mr-2" />
+          <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 min-w-[200px] border border-neutral">
+            <ThumbsUp className="w-5 h-5 text-accent mr-2" />
             <input
               type="range"
               min={0}
               max={100}
               value={popularity}
               onChange={(e) => setPopularity(Number(e.target.value))}
-              className="w-full accent-indigo-500"
+              className="w-full accent-primary"
             />
             <span className="ml-2 text-sm text-gray-600">{popularity}+</span>
           </div>
           
           {/* Rating Slider */}
-          <div className="flex items-center bg-white rounded-lg shadow px-3 py-2 min-w-[200px]">
-            <Star className="w-5 h-5 text-yellow-400 mr-2" />
+          <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 min-w-[200px] border border-neutral">
+            <Star className="w-5 h-5 text-secondary mr-2" />
             <input
               type="range"
               min={0}
@@ -231,7 +246,7 @@ export default function SearchQuiz() {
               step={0.5}
               value={minRating}
               onChange={(e) => setMinRating(Number(e.target.value))}
-              className="w-full accent-indigo-500"
+              className="w-full accent-primary"
             />
             <span className="ml-2 text-sm text-gray-600">{minRating}+ ★</span>
           </div>
@@ -243,7 +258,7 @@ export default function SearchQuiz() {
               Loading quizzes...
             </div>
           ) : error ? (
-            <div className="col-span-full text-center text-red-500 py-12">
+            <div className="col-span-full text-center text-error py-12">
               {error}
             </div>
           ) : filteredQuizzes.length === 0 ? (

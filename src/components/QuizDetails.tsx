@@ -2,6 +2,30 @@ import React from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
 
+// Define interfaces locally for type safety
+interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  image: string;
+  popularity?: number;
+  language: string;
+  averageRating?: number;
+  ratingCount?: number;
+  questionCount?: number;
+  [key: string]: unknown;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number;
+  image?: string;
+  time: number;
+}
+
 export default function QuizDetails({
   quiz,
   questions,
@@ -11,8 +35,8 @@ export default function QuizDetails({
   onStartMultiplayer,
   onBackToSearch,
 }: {
-  quiz: any;
-  questions: any[];
+  quiz: Quiz; // Use Quiz interface
+  questions: Question[]; // Use Question interface
   questionsCollapsed: boolean;
   setQuestionsCollapsed: (c: boolean) => void;
   onStartSinglePlayer: () => void;
@@ -35,7 +59,7 @@ export default function QuizDetails({
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
+      <h1 className="text-2xl font-bold mb-2 text-primary">{quiz.title}</h1>
       {quiz.image && quiz.image.trim() !== "" ? (
         <img
           src={quiz.image}
@@ -67,13 +91,13 @@ export default function QuizDetails({
         {quiz.tags?.map((tag: string) => (
           <span
             key={tag}
-            className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs"
+            className="inline-block bg-accent text-white px-2 py-0.5 rounded text-xs"
           >
             {tag}
           </span>
         ))}
         {quiz.language && (
-          <span className="inline-block bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">
+          <span className="inline-block bg-secondary text-primary px-2 py-0.5 rounded text-xs font-medium">
             {quiz.language}
           </span>
         )}
@@ -81,7 +105,7 @@ export default function QuizDetails({
       {/* Collapsible Questions */}
       <div className="my-6">
         <button
-          className="px-4 py-2 bg-gray-100 rounded border text-gray-700 font-semibold"
+          className="px-4 py-2 bg-neutral rounded border border-secondary text-primary font-semibold hover:bg-secondary/50 transition"
           onClick={() => setQuestionsCollapsed(!questionsCollapsed)}
         >
           {questionsCollapsed ? "Show Questions (Spoilers!)" : "Hide Questions"}
@@ -102,13 +126,13 @@ export default function QuizDetails({
       {/* Start Buttons */}
       <div className="flex gap-4 mt-8">
         <button
-          className="px-6 py-2 bg-emerald-600 text-white rounded font-bold"
+          className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-accent transition"
           onClick={onStartSinglePlayer}
         >
           Start Single Player
         </button>
         <button
-          className="px-6 py-2 bg-blue-600 text-white rounded font-bold"
+          className="px-6 py-2 bg-secondary text-primary rounded font-bold hover:bg-accent transition"
           onClick={onStartMultiplayer}
         >
           Start Multiplayer
@@ -116,7 +140,7 @@ export default function QuizDetails({
       </div>
       <div className="mt-6">
         <button
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+          className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
           onClick={onBackToSearch}
         >
           Back to Search

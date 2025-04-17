@@ -5,23 +5,23 @@ import { auth } from "../firebaseClient";
 
 export default function Navbar({ user }: { user?: { name: string } }) {
   return (
-    <nav className="w-full bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm fixed top-0 left-0 z-30">
+    <nav className="w-full bg-primary text-white border-b border-secondary shadow-md fixed top-0 left-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl text-emerald-600">
-          <Rocket className="w-7 h-7 text-emerald-500" />
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl text-white">
+          <Rocket className="w-7 h-7 text-secondary" />
           RocketQuiz
         </Link>
         <div className="flex items-center gap-4">
           <Link
             to="/search"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:text-secondary transition"
           >
             <Search className="w-5 h-5" />
             <span className="hidden sm:inline">Browse</span>
           </Link>
           <Link
             to="/create-quiz"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:text-secondary transition"
           >
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">Create</span>
@@ -30,14 +30,14 @@ export default function Navbar({ user }: { user?: { name: string } }) {
             <div className="flex items-center gap-2">
               <Link
                 to="/profile"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:text-secondary transition"
               >
                 <User className="w-5 h-5" />
                 <span className="hidden sm:inline">{user.name}</span>
               </Link>
               <button
                 onClick={() => signOut(auth)}
-                className="ml-2 px-4 py-1.5 rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+                className="ml-2 px-4 py-1.5 rounded-md bg-warning text-neutral font-semibold hover:bg-accent transition"
               >
                 Logout
               </button>
@@ -46,14 +46,14 @@ export default function Navbar({ user }: { user?: { name: string } }) {
             <>
               <Link
                 to="/login"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-emerald-50 transition"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:text-secondary transition"
               >
                 <LogIn className="w-5 h-5" />
                 <span className="hidden sm:inline">Login</span>
               </Link>
               <Link
                 to="/register"
-                className="ml-2 px-4 py-1.5 rounded-md bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
+                className="ml-2 px-4 py-1.5 rounded-md bg-warning text-neutral font-semibold hover:bg-accent transition"
               >
                 Register
               </Link>

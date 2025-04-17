@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; // Remove useLocation
 import Leaderboard from "../components/Leaderboard";
 import { db } from "../firebaseClient";
-import { doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot } from "firebase/firestore";
+// Import DocumentSnapshot
+import { doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot, DocumentSnapshot } from "firebase/firestore";
 
 export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore session doc
@@ -32,18 +33,25 @@ export default function ResultsPage() {
   }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [quiz, setQuiz] = useState<any>(null);
+  // Define Quiz interface
+  interface Quiz {
+    id: string;
+    title: string;
+    averageRating?: number;
+    ratingCount?: number;
+    [key: string]: unknown;
+  }
+  const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz interface
   const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
   const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
-  const [spScore, setSpScore] = useState<number>(() => {
+  const [spScore] = useState<number>(() => { // Ensure setSpScore is removed
     if (typeof window !== "undefined") {
       const storedScore = localStorage.getItem("sp_score");
       return storedScore ? parseInt(storedScore, 10) : 0;
     }
     return 0;
   });
-  const [nickname, setNickname] = useState<string>(() => {
+  const [nickname] = useState<string>(() => { // Ensure setNickname is removed
     if (typeof window !== "undefined") {
       return localStorage.getItem("mp_nickname") || "";
     }
@@ -143,7 +151,7 @@ export default function ResultsPage() {
     // Set up a listener for changes to the session document
     if (sessionId) {
       const sessionRef = doc(db, "sessions", sessionId);
-      const unsubscribe = onSnapshot(sessionRef, (snapshot: any) => {
+      const unsubscribe = onSnapshot(sessionRef, (snapshot: DocumentSnapshot) => { // Use imported DocumentSnapshot
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data.mpScores && data.mpLeaderboard) {
@@ -170,7 +178,7 @@ export default function ResultsPage() {
       if (!id) return;
       const quizDoc = await getDoc(doc(db, "quizzes", id));
       if (quizDoc.exists()) {
-        setQuiz({ id: quizDoc.id, ...quizDoc.data() });
+        setQuiz({ id: quizDoc.id, ...quizDoc.data() } as Quiz); // Cast to Quiz
       }
     }
     fetchQuiz();

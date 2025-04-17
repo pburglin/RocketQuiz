@@ -17,22 +17,27 @@ const Login: React.FC = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/"); // Redirect to home on success
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) { // Use unknown for error type
+      // Type guard to check if err is an Error object
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred during login.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md p-8 bg-white rounded shadow">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-secondary/20 to-accent/20">
+      <div className="w-full max-w-md p-8 bg-base-100 rounded shadow-lg border border-neutral">
+        <h2 className="text-2xl font-bold mb-6 text-center text-primary">Login</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
-            className="w-full px-4 py-2 border rounded"
+            className="w-full px-4 py-2 border border-neutral rounded bg-base-100"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -40,15 +45,15 @@ const Login: React.FC = () => {
           <input
             type="password"
             placeholder="Password"
-            className="w-full px-4 py-2 border rounded"
+            className="w-full px-4 py-2 border border-neutral rounded bg-base-100"
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
           />
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error && <div className="text-error text-sm">{error}</div>}
           <button
             type="submit"
-            className="w-full py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition"
+            className="w-full py-2 bg-primary text-white rounded hover:bg-accent transition disabled:bg-gray-400"
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}
@@ -56,7 +61,7 @@ const Login: React.FC = () => {
         </form>
         <div className="mt-4 text-center">
           <span>Don't have an account? </span>
-          <a href="/register" className="text-emerald-600 hover:underline">
+          <a href="/register" className="text-primary hover:text-accent hover:underline">
             Register
           </a>
         </div>
