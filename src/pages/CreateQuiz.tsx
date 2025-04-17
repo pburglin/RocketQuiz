@@ -112,7 +112,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       let data;
       try {
         data = JSON.parse(responseText);
-      } catch (e) {
+      } catch { // Remove unused variable
         console.error("[AI GENERATE] Failed to parse response as JSON:", responseText);
         throw new Error("Failed to parse LLM API response as JSON.");
       }
@@ -142,7 +142,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           parsed = JSON.parse(parsed);
         }
         quizObj = parsed;
-      } catch (e) {
+      } catch { // Remove unused variable
         console.error("[AI GENERATE] Failed to parse LLM message content as JSON:", content);
         throw new Error("Failed to parse LLM response as JSON. Response: " + content);
       }
@@ -158,9 +158,17 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setLanguage(quizObj.language || "");
       setTags(Array.isArray(quizObj.tags) ? quizObj.tags.join(", ") : (quizObj.tags || ""));
       setImage(quizObj.image || "");
+      // Define a type for the AI question structure
+      interface AIQuestion {
+        question?: string;
+        answers?: string[];
+        correctAnswer?: number;
+        image?: string;
+        time?: number;
+      }
       // Map questions to our Question type, with defaults
       setQuestions(
-        quizObj.questions.map((q: any) => ({
+        quizObj.questions.map((q: AIQuestion) => ({ // Use defined type
           question: q.question || "",
           answers: Array.isArray(q.answers) ? q.answers : ["", "", "", ""],
           correctAnswer: typeof q.correctAnswer === "number" ? q.correctAnswer : 0,
@@ -168,9 +176,11 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           time: typeof q.time === "number" ? q.time : 30,
         }))
       );
-    } catch (err: any) {
+    } catch (err: unknown) { // Use unknown type for error
       console.error("[AI GENERATE] Error:", err);
-      setAIError(err.message || "Failed to generate quiz with AI.");
+      // Check if err is an Error object before accessing message
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate quiz with AI.";
+      setAIError(errorMessage);
     } finally {
       setAILoading(false);
     }
@@ -198,8 +208,8 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   
       // Use a batch for all questions and answers
       const batch = writeBatch(db);
-  
-      questions.forEach((q, qIdx) => {
+
+      questions.forEach((q) => { // Remove unused qIdx
         const questionRef = doc(collection(db, "quizzes", quizRef.id, "questions"));
         batch.set(questionRef, {
           question: q.question,
@@ -245,13 +255,13 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         </div>
         <a
           href="/register"
-          className="inline-block px-6 py-3 rounded-lg bg-emerald-600 text-white font-semibold text-lg shadow hover:bg-emerald-700 transition"
+          className="inline-block px-6 py-3 rounded-lg bg-primary text-white font-semibold text-lg shadow hover:bg-primary/90 transition" // Use primary color
         >
           Register an Account
         </a>
         <div className="mt-4">
           Already have an account?{" "}
-          <a href="/login" className="text-emerald-600 hover:underline">
+          <a href="/login" className="text-primary hover:underline"> // Use primary color
             Login
           </a>
         </div>
@@ -262,12 +272,12 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   return (
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Create a New Quiz</h1>
-      {error && <div className="mb-4 text-red-600">{error}</div>}
-      {success && <div className="mb-4 text-green-600">Quiz created successfully!</div>}
+      {error && <div className="mb-4 p-3 rounded text-center bg-error/10 text-error font-medium">{error}</div>} {/* Style error message */}
+      {success && <div className="mb-4 p-3 rounded text-center bg-success/10 text-success font-medium">Quiz created successfully!</div>} {/* Style success message */}
       {loading && <div className="mb-4 text-gray-600">Saving quiz...</div>}
 
       {/* AI Quiz Generation Section */}
-      <div className="mb-8 p-4 border rounded bg-blue-50">
+      <div className="mb-8 p-4 border rounded bg-neutral"> {/* Use neutral color */}
         <h2 className="text-lg font-semibold mb-2">Generate Quiz with AI</h2>
         <label className="block mb-1 font-medium">Describe the quiz you want to generate</label>
         <textarea
@@ -279,13 +289,19 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         />
         <button
           type="button"
-          className="bg-emerald-600 text-white px-4 py-2 rounded font-bold"
+          className="bg-primary text-white px-4 py-2 rounded font-bold flex items-center justify-center disabled:opacity-50" // Use primary color, add flex for spinner alignment
           onClick={handleAIGenerate}
           disabled={aiLoading || !aiDescription.trim()}
         >
+          {aiLoading && (
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
           {aiLoading ? "Generating..." : "Generate with AI"}
         </button>
-        {aiError && <div className="mt-2 text-red-600">{aiError}</div>}
+        {aiError && <div className="mt-2 text-error">{aiError}</div>} {/* Use error color */}
         <div className="mt-2 text-gray-600 text-sm">
           The generated quiz will fill the form below. You can review and edit before saving.
         </div>
@@ -341,7 +357,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         <div>
           <h2 className="text-lg font-semibold mb-2">Questions</h2>
           {questions.map((q, qIdx) => (
-            <div key={qIdx} className="mb-4 border p-3 rounded bg-gray-50">
+            <div key={qIdx} className="mb-4 border p-3 rounded bg-neutral"> {/* Use neutral color */}
               <div className="flex justify-between items-center mb-2">
                 <label className="font-semibold">
                   Question {qIdx + 1}
@@ -349,7 +365,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
                 {questions.length > 1 && (
                   <button
                     type="button"
-                    className="text-red-500"
+                    className="text-error hover:text-error/80" // Use error color
                     onClick={() => removeQuestion(qIdx)}
                   >
                     Remove
@@ -436,7 +452,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           ))}
           <button
             type="button"
-            className="bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-accent text-white px-4 py-2 rounded hover:bg-accent/90" // Use accent color
             onClick={addQuestion}
           >
             Add Question
@@ -444,7 +460,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         </div>
         <button
           type="submit"
-          className="bg-green-600 text-white px-6 py-2 rounded font-bold"
+          className="bg-primary text-white px-6 py-2 rounded font-bold hover:bg-primary/90 disabled:opacity-50" // Use primary color
           disabled={loading}
         >
           {loading ? "Creating..." : "Create Quiz"}

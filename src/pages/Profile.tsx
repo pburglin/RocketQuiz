@@ -8,21 +8,20 @@ type ProfileProps = {
 };
 
 const NICKNAME_KEY = "rocketquiz_nickname";
-const THEME_KEY = "rocketquiz_theme";
+// const THEME_KEY = "rocketquiz_theme"; // Theme is likely handled globally now
 
 export default function Profile({ user }: ProfileProps) {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // const [theme, setTheme] = useState<"light" | "dark">("light"); // Remove local theme state
   const [loading, setLoading] = useState(false);
 
-  // Load nickname and theme from localStorage on mount
+  // Load nickname from localStorage on mount
   useEffect(() => {
     const storedNickname = localStorage.getItem(NICKNAME_KEY) || "";
     setNickname(storedNickname);
-    const storedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light";
-    setTheme(storedTheme);
-    // No longer manipulate document.documentElement here
+    // const storedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light";
+    // setTheme(storedTheme);
   }, []);
 
   // Redirect to login if not authenticated
@@ -46,12 +45,12 @@ export default function Profile({ user }: ProfileProps) {
     localStorage.setItem(NICKNAME_KEY, nickname);
   };
 
-  const handleThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTheme = e.target.value as "light" | "dark";
-    setTheme(newTheme);
-    localStorage.setItem(THEME_KEY, newTheme);
-    // No longer manipulate document.documentElement here
-  };
+  // Remove theme change handler
+  // const handleThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const newTheme = e.target.value as "light" | "dark";
+  //   setTheme(newTheme);
+  //   localStorage.setItem(THEME_KEY, newTheme);
+  // };
 
   const handleDeleteAccount = async () => {
     if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
@@ -64,58 +63,53 @@ export default function Profile({ user }: ProfileProps) {
         alert("Account deleted.");
         navigate("/");
       }
-    } catch (err: any) {
-      alert("Error deleting account: " + (err.message || err));
+    } catch (err: unknown) { // Use unknown type
+       const errorMessage = err instanceof Error ? err.message : String(err);
+      alert("Error deleting account: " + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
+    // Apply base styling directly, remove theme conditional logic
     <div
-      className={`max-w-lg mx-auto mt-12 p-6 rounded-lg shadow ${
-        theme === "dark"
-          ? "dark bg-gray-900 shadow-lg border border-gray-700 text-gray-100"
-          : "bg-white shadow text-gray-900"
-      }`}
+      className="max-w-lg mx-auto mt-12 p-6 rounded-lg shadow bg-base-100 text-gray-900" // Use base background
     >
       <h1 className="text-2xl font-bold mb-4">Profile</h1>
       <div className="mb-4">
-        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Email</label>
-        <div className={`p-2 rounded ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"}`}>{user.email}</div>
+        <label className="block font-semibold mb-1 text-gray-700">Email</label> {/* Default text color */}
+        <div className="p-2 rounded bg-neutral">{user.email}</div> {/* Use neutral background */}
       </div>
       <div className="mb-4">
-        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`} htmlFor="nickname">
+        <label className="block font-semibold mb-1 text-gray-700" htmlFor="nickname"> {/* Default text color */}
           Default Nickname for Multiplayer
         </label>
         <input
           id="nickname"
           type="text"
-          className={`w-full p-2 border rounded ${theme === "dark" ? "bg-gray-800 border-gray-700 text-gray-100" : ""}`}
+          className="w-full p-2 border rounded bg-neutral border-gray-300" // Use neutral background, add default border
           value={nickname}
           onChange={handleNicknameChange}
         />
         <button
-          className={`mt-2 px-4 py-2 text-white rounded ${
-            theme === "dark"
-              ? "bg-emerald-700 hover:bg-emerald-800"
-              : "bg-emerald-600 hover:bg-emerald-700"
-          }`}
+          className="mt-2 px-4 py-2 text-white rounded bg-primary hover:bg-primary/90" // Use primary color
           onClick={handleSaveNickname}
         >
           Save Nickname
         </button>
       </div>
-      <div className="mb-4">
-        <label className={`block font-semibold mb-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>UI Theme</label>
+      {/* Remove UI Theme selection section */}
+      {/* <div className="mb-4">
+        <label className="block font-semibold mb-1 text-gray-700">UI Theme</label>
         <div className="flex gap-4">
           <label>
             <input
               type="radio"
               name="theme"
               value="light"
-              checked={theme === "light"}
-              onChange={handleThemeChange}
+              checked={true} // Default or based on global state
+              // onChange={handleThemeChange} // Removed
             />
             <span className="ml-1">Light</span>
           </label>
@@ -124,20 +118,16 @@ export default function Profile({ user }: ProfileProps) {
               type="radio"
               name="theme"
               value="dark"
-              checked={theme === "dark"}
-              onChange={handleThemeChange}
+              checked={false} // Default or based on global state
+              // onChange={handleThemeChange} // Removed
             />
             <span className="ml-1">Dark</span>
           </label>
         </div>
-      </div>
+      </div> */}
       <div className="mt-8">
         <button
-          className={`px-4 py-2 text-white rounded ${
-            theme === "dark"
-              ? "bg-red-700 hover:bg-red-800"
-              : "bg-red-600 hover:bg-red-700"
-          }`}
+          className="px-4 py-2 text-white rounded bg-error hover:bg-error/90 disabled:opacity-50" // Use error color
           onClick={handleDeleteAccount}
           disabled={loading}
         >
