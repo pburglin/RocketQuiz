@@ -2,13 +2,37 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QuizDetails from "../components/QuizDetails";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, DocumentData } from "firebase/firestore";
 
+// Define interfaces for better type safety
+interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  image: string;
+  popularity?: number;
+  language: string;
+  averageRating?: number;
+  ratingCount?: number;
+  questionCount?: number;
+  // Add any other fields from your Firestore quiz document
+  [key: string]: unknown; // Allow other potential fields, use unknown for better type safety
+}
+
+interface Question {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: number; // Assuming correctAnswer is the index
+  image?: string;
+  time: number;
+}
 export default function QuizDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<any>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,33 +53,54 @@ export default function QuizDetailsPage() {
           setLoading(false);
           return;
         }
-        const quizData = quizDoc.data();
+        const quizData = quizDoc.data() as DocumentData; // Cast to DocumentData initially
         setQuiz({
           id: quizDoc.id,
           ...quizData,
-        });
+        } as Quiz); // Assert as Quiz type when setting state
 
+        // Fetch questions
         const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-        const questionsArr: any[] = [];
-        for (const qDoc of questionsSnap.docs) {
+        const questionDocs = questionsSnap.docs;
+
+        // Create promises to fetch answers for all questions concurrently
+        const answerPromises = questionDocs.map(qDoc =>
+          getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"))
+        );
+
+        // Wait for all answer fetches to complete
+        const answerSnapshots = await Promise.all(answerPromises);
+
+        // Process questions and their fetched answers
+        const questionsArr = questionDocs.map((qDoc, index) => {
           const qData = qDoc.data();
-          const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
+          const answersSnap = answerSnapshots[index];
           const answersArr: string[] = [];
           answersSnap.forEach((aDoc) => {
             const aData = aDoc.data();
+            // Ensure array is large enough, handle potential gaps if indices aren't sequential
+            if (aData.index >= answersArr.length) {
+              answersArr.length = aData.index + 1;
+            }
             answersArr[aData.index] = aData.answer;
           });
-          questionsArr.push({
+          // Fill potential gaps with empty strings or a placeholder if needed
+          for (let i = 0; i < answersArr.length; i++) {
+            if (answersArr[i] === undefined) answersArr[i] = "";
+          }
+
+          return {
             id: qDoc.id,
             question: qData.question,
             answers: answersArr,
             correctAnswer: qData.correctAnswer,
             image: qData.image,
             time: typeof qData.time === "number" ? qData.time : 30,
-          });
-        }
+          };
+        });
+
         setQuestions(questionsArr);
-      } catch (err) {
+      } catch { // Remove unused 'err' variable
         setError("Failed to load quiz.");
       } finally {
         setLoading(false);
@@ -88,7 +133,7 @@ export default function QuizDetailsPage() {
 
   return (
     <QuizDetails
-      quiz={quiz}
+      quiz={quiz!} // Use non-null assertion as we check for null earlier
       questions={questions}
       questionsCollapsed={questionsCollapsed}
       setQuestionsCollapsed={setQuestionsCollapsed}

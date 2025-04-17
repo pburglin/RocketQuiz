@@ -1,4 +1,5 @@
 import { Tag } from "lucide-react";
+import { Link } from "react-router-dom";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
 
@@ -19,8 +20,8 @@ export default function QuizCard({
   };
 }) {
   return (
-    <a
-      href={`/play/quiz/${quiz.id}/details`}
+    <Link
+      to={`/play/quiz/${quiz.id}/details`}
       className="min-w-[300px] max-w-xs bg-white rounded-xl shadow-lg hover:shadow-2xl transition flex flex-col overflow-hidden border border-gray-100"
     >
       {quiz.image && quiz.image.trim() !== "" ? (
@@ -78,6 +79,6 @@ export default function QuizCard({
           </span>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
