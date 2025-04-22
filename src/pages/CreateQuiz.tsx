@@ -222,7 +222,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       const payload = { // Reconstruct payload
         model: modelName,
         messages: [
-          { role: "system", content: "..." }, // Keep system prompt for context
+          { role: "system", content: "You are an assistant that generates quizzes based on user descriptions. Respond ONLY with a valid JSON object representing the quiz structure. Do NOT include any introductory text, explanations, or conversational filler. The JSON object should have keys like 'title', 'description', 'language', 'tags' (array of strings), 'image' (optional URL), and 'questions' (array of objects). Each question object should have 'question', 'answers' (array of 4 strings), 'correctAnswer' (0-based index), 'image' (optional URL), and 'time' (number in seconds)." },
           { role: "user", content: aiDescription }
         ]
       };
@@ -238,7 +238,30 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       if (!response.ok) { throw new Error(`LLM API error: ${response.statusText} (status ${response.status})`); }
       let data; try { data = JSON.parse(responseText); } catch { throw new Error("Failed to parse LLM API response as JSON."); }
       const content = data?.choices?.[0]?.message?.content; if (!content) { throw new Error("No content returned from LLM API."); }
-      let quizObj; try { /* ... parsing content ... */ quizObj = JSON.parse(content.trim()); } catch { throw new Error("Failed to parse LLM message content as JSON. Response: " + content); }
+      let quizObj;
+      try {
+        // First, try parsing the trimmed content directly
+        quizObj = JSON.parse(content.trim());
+      } catch (parseError) {
+        // If direct parsing fails, try extracting the JSON object
+        console.warn("Direct JSON parsing failed, attempting extraction:", parseError);
+        const startIndex = content.indexOf('{');
+        const endIndex = content.lastIndexOf('}');
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+          const jsonString = content.substring(startIndex, endIndex + 1);
+          try {
+            quizObj = JSON.parse(jsonString);
+            console.log("Successfully extracted and parsed JSON.");
+          } catch (extractionError) {
+            console.error("Failed to parse extracted JSON:", extractionError);
+            // Throw the original error if extraction also fails, including the full problematic content
+            throw new Error("Failed to parse LLM message content as JSON, even after extraction. Response: " + content);
+          }
+        } else {
+          // Throw the original error if no JSON object markers found
+          throw new Error("Failed to parse LLM message content as JSON and could not find JSON markers. Response: " + content);
+        }
+      }
       if (!quizObj || !quizObj.questions || !Array.isArray(quizObj.questions)) { throw new Error("Invalid quiz object from LLM API."); }
       // --- End re-added API logic ---
 
