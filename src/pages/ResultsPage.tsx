@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Remove useLocation
+import { useParams, useNavigate } from "react-router-dom";
 import Leaderboard from "../components/Leaderboard";
+import MultiplayerStatsReport from "../components/MultiplayerStatsReport"; // Import the new component
 import { db } from "../firebaseClient";
-// Import DocumentSnapshot
-import { doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot, DocumentSnapshot } from "firebase/firestore";
+import {
+  doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot,
+  collection, getDocs, Timestamp, DocumentSnapshot // Add necessary Firestore imports
+} from "firebase/firestore";
 
 export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore session doc
@@ -41,10 +44,36 @@ export default function ResultsPage() {
     ratingCount?: number;
     [key: string]: unknown;
   }
-  const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz interface
+
+  // Define Question structure
+  interface Question {
+    id: string;
+    question: string;
+    answers: string[];
+    correctAnswer: number;
+    image?: string;
+    time: number;
+  }
+
+  // Define AnswerData structure
+  interface AnswerData {
+    nickname: string;
+    qIdx: number;
+    answer: number;
+    answeredAt: Timestamp;
+    isCorrect: boolean;
+    questionStart?: Timestamp | null;
+    questionId?: string; // Add questionId if available/needed
+  }
+
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]); // State for questions
   const [mpLeaderboard, setMpLeaderboard] = useState<string[]>([]);
   const [mpScores, setMpScores] = useState<{ [nickname: string]: number }>({});
-  const [spScore] = useState<number>(() => { // Ensure setSpScore is removed
+  const [mpAllAnswers, setMpAllAnswers] = useState<AnswerData[]>([]); // State for all answers
+  const [players, setPlayers] = useState<string[]>([]); // State for player list
+  const [isLoadingStats, setIsLoadingStats] = useState<boolean>(false); // Loading state for stats data
+  const [spScore] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const storedScore = localStorage.getItem("sp_score");
       return storedScore ? parseInt(storedScore, 10) : 0;
@@ -105,7 +134,14 @@ export default function ResultsPage() {
           setMpScores(data.mpScores);
           setMpLeaderboard(data.mpLeaderboard);
           setIsMultiplayer(true);
-          
+          // Also try to get players from session data if available
+          if (data.players && Array.isArray(data.players)) {
+            setPlayers(data.players);
+          } else {
+            // Fallback: derive players from scores if not in session doc
+            setPlayers(Object.keys(data.mpScores));
+          }
+
           // Update localStorage with the latest data
           if (typeof window !== "undefined") {
             localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
@@ -113,7 +149,7 @@ export default function ResultsPage() {
           }
         } else {
           console.error("Missing mpScores or mpLeaderboard in session data");
-          
+
           // If leaderboard is missing but scores exist, create it
           if (data.mpScores && !data.mpLeaderboard) {
             console.log("Creating leaderboard from scores");
@@ -121,16 +157,17 @@ export default function ResultsPage() {
             const leaderboard = Object.entries(scores as Record<string, number>)
               .sort((a, b) => b[1] - a[1])
               .map(([nick]) => nick);
-            
+
             setMpLeaderboard(leaderboard);
             setMpScores(scores);
             setIsMultiplayer(true);
-            
+            setPlayers(Object.keys(scores)); // Derive players from scores
+
             // Update the session with the leaderboard
             try {
               await setDoc(sessionRef, { mpLeaderboard: leaderboard }, { merge: true });
               console.log("Updated session with leaderboard");
-              
+
               // Update localStorage with the latest data
               if (typeof window !== "undefined") {
                 localStorage.setItem("mp_scores", JSON.stringify(scores));
@@ -145,13 +182,13 @@ export default function ResultsPage() {
         console.error("Session document does not exist");
       }
     }
-    
+
     fetchMultiplayerResults();
-    
-    // Set up a listener for changes to the session document
+
+    // Set up a listener for changes to the session document (scores, leaderboard, players)
     if (sessionId) {
       const sessionRef = doc(db, "sessions", sessionId);
-      const unsubscribe = onSnapshot(sessionRef, (snapshot: DocumentSnapshot) => { // Use imported DocumentSnapshot
+      const unsubscribe = onSnapshot(sessionRef, (snapshot: DocumentSnapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data.mpScores && data.mpLeaderboard) {
@@ -159,7 +196,14 @@ export default function ResultsPage() {
             setMpScores(data.mpScores);
             setMpLeaderboard(data.mpLeaderboard);
             setIsMultiplayer(true);
-            
+
+            // Update players list from session data or scores
+            if (data.players && Array.isArray(data.players)) {
+              setPlayers(data.players);
+            } else {
+              setPlayers(Object.keys(data.mpScores));
+            }
+
             // Update localStorage with the latest data
             if (typeof window !== "undefined") {
               localStorage.setItem("mp_scores", JSON.stringify(data.mpScores));
@@ -168,21 +212,92 @@ export default function ResultsPage() {
           }
         }
       });
-      
-      return () => unsubscribe();
+
+      // Also listen for players subcollection if session doc doesn't have players array
+      const playersRef = collection(db, "sessions", sessionId, "players");
+      const unsubPlayers = onSnapshot(playersRef, (snap) => {
+        const playerNicks = snap.docs.map(d => d.id);
+        if (playerNicks.length > 0) {
+           // Only update if the session doc didn't provide players
+           setPlayers(prevPlayers => prevPlayers.length === 0 ? playerNicks : prevPlayers);
+        }
+      });
+
+
+      return () => {
+        unsubscribe();
+        unsubPlayers();
+      };
     }
   }, [sessionId]);
 
+  // Fetch Quiz Details and Questions
   useEffect(() => {
-    async function fetchQuiz() {
+    async function fetchQuizAndQuestions() {
       if (!id) return;
+      // Fetch quiz details
       const quizDoc = await getDoc(doc(db, "quizzes", id));
       if (quizDoc.exists()) {
-        setQuiz({ id: quizDoc.id, ...quizDoc.data() } as Quiz); // Cast to Quiz
+        setQuiz({ id: quizDoc.id, ...quizDoc.data() } as Quiz);
+      }
+
+      // Fetch questions (needed for stats report)
+      const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+      const questionsArr: Question[] = [];
+      for (const qDoc of questionsSnap.docs) {
+        const qData = qDoc.data();
+        const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
+        const answersArr: string[] = [];
+        answersSnap.forEach((aDoc) => {
+          const aData = aDoc.data();
+          answersArr[aData.index] = aData.answer;
+        });
+        questionsArr.push({
+          id: qDoc.id,
+          question: qData.question,
+          answers: answersArr,
+          correctAnswer: qData.correctAnswer,
+          image: qData.image,
+          time: typeof qData.time === "number" ? qData.time : 30,
+        });
+      }
+      setQuestions(questionsArr);
+    }
+    fetchQuizAndQuestions();
+  }, [id]);
+
+  // Fetch Detailed Multiplayer Answers for Stats Report
+  useEffect(() => {
+    // Determine if it's multiplayer based on available data
+    const finalIsMultiplayer = isMultiplayer || Object.keys(mpScores).length > 0 || sessionId !== null;
+
+    async function fetchMultiplayerAnswers() {
+      if (!sessionId || !finalIsMultiplayer) return;
+
+      console.log("Fetching detailed answers for session:", sessionId);
+      setIsLoadingStats(true);
+      try {
+        const answersRef = collection(db, "sessions", sessionId, "answers");
+        const answersSnap = await getDocs(answersRef);
+        const allAnswers = answersSnap.docs.map(doc => {
+            const data = doc.data();
+            // Ensure questionStart is included if present
+            return {
+                ...data,
+                questionStart: data.questionStart || null // Handle missing questionStart
+            } as AnswerData;
+        });
+        setMpAllAnswers(allAnswers);
+        console.log("Fetched detailed answers:", allAnswers);
+      } catch (error) {
+        console.error("Error fetching detailed answers:", error);
+      } finally {
+        setIsLoadingStats(false);
       }
     }
-    fetchQuiz();
-  }, [id]);
+
+    fetchMultiplayerAnswers();
+  }, [sessionId, isMultiplayer, mpScores]); // Re-run if session ID changes or multiplayer status is confirmed
 
 
   const handleRateQuiz = async (rating: number) => {
@@ -234,17 +349,35 @@ export default function ResultsPage() {
   const finalIsMultiplayer = isMultiplayer || Object.keys(mpScores).length > 0 || sessionId !== null;
 
   return (
-    <Leaderboard
-      quiz={quiz}
-      isMultiplayer={finalIsMultiplayer}
-      mpLeaderboard={finalLeaderboard}
-      mpScores={mpScores}
-      nickname={nickname}
-      spScore={spScore}
-      onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}
-      onFindAnotherQuiz={() => navigate("/search")}
-      showMedals={true}
-      onRateQuiz={handleRateQuiz}
-    />
+    <div className="container mx-auto p-4">
+      <Leaderboard
+        quiz={quiz}
+        isMultiplayer={finalIsMultiplayer}
+        mpLeaderboard={finalLeaderboard}
+        mpScores={mpScores}
+        nickname={nickname}
+        spScore={spScore}
+        onPlayAgain={() => navigate(`/play/quiz/${id}/details`)}
+        onFindAnotherQuiz={() => navigate("/search")}
+        showMedals={true}
+        onRateQuiz={handleRateQuiz}
+      />
+
+      {/* Conditionally render the stats report for multiplayer */}
+      {finalIsMultiplayer && (
+        isLoadingStats ? (
+          <div className="mt-8 text-center text-primary">Loading statistics...</div>
+        ) : mpAllAnswers.length > 0 && questions.length > 0 && players.length > 0 ? (
+          <MultiplayerStatsReport
+            players={players}
+            answers={mpAllAnswers}
+            questions={questions}
+            scores={mpScores}
+          />
+        ) : (
+          !isLoadingStats && <div className="mt-8 text-center text-secondary">Could not load detailed statistics for this session.</div>
+        )
+      )}
+    </div>
   );
 }
