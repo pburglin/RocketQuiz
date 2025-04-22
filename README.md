@@ -173,4 +173,4 @@ RocketQuiz is a modern, production-ready, Kahoot-like quizzer web app built with
 
 ## License
 
-MIT
+GNU AFFERO GENERAL PUBLIC LICENSE (AGPL) - see LICENSE.txt for more details.
