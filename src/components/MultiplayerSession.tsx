@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import { UserAvatar } from "./index";
 import { Timestamp } from "firebase/firestore"; // Import Timestamp
@@ -67,6 +67,12 @@ interface MultiplayerSessionProps {
   isOrganizer: boolean;
 }
 
+// Define the structure for shuffled answers
+interface ShuffledAnswer {
+  text: string;
+  originalIndex: number;
+}
+
 
 export default function MultiplayerSession({
   // Destructure only the needed props, removing duplicates and unused ones
@@ -101,6 +107,32 @@ export default function MultiplayerSession({
 }: MultiplayerSessionProps) { // Use the defined interface
   const q = questions.length > 0 ? questions[current] : null;
   const isLastQuestion = current === questions.length - 1;
+
+  // State to hold the shuffled answers for the current question
+  const [shuffledAnswers, setShuffledAnswers] = useState<ShuffledAnswer[]>([]);
+
+  // Fisher-Yates (aka Knuth) Shuffle function
+  const shuffleArray = (array: ShuffledAnswer[]) => { // Use specific type
+    let currentIndex = array.length, randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex !== 0) {
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+    return array;
+  };
+
+  // Effect to shuffle answers when the question changes
+  useEffect(() => {
+    if (q) {
+      const answersWithOriginalIndex = q.answers.map((text, index) => ({ text, originalIndex: index }));
+      setShuffledAnswers(shuffleArray(answersWithOriginalIndex));
+    }
+  }, [q]); // Dependency array includes q, so it runs when the question object changes
 
   if (!q) {
     return (
@@ -151,32 +183,32 @@ export default function MultiplayerSession({
         </span>
       </div>
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {q.answers.map((answer: string, idx: number) => (
+        {shuffledAnswers.map((answer: ShuffledAnswer, displayIndex: number) => (
           <button
-            key={idx}
+            key={displayIndex} // Use displayIndex for React key, originalIndex for logic
             className={`w-full px-4 py-2 rounded border text-left transition
               ${
                 mpShowAnswer
-                  ? idx === q.correctAnswer
+                  ? answer.originalIndex === q.correctAnswer
                     ? "bg-success/30 border-success font-bold" // Correct answer shown
                     : "bg-error/20 border-error" // Incorrect answer shown
-                  : mpSelected === idx
+                  : mpSelected === answer.originalIndex
                   ? "bg-secondary/50 border-secondary" // Selected answer
                   : "bg-base-100 border-neutral hover:bg-secondary/20" // Default answer
               }
             `}
             disabled={mpShowAnswer || mpAnswered || (isOrganizer && !players.includes(nickname))}
-            onClick={() => submitMpAnswer(idx)}
+            onClick={() => submitMpAnswer(answer.originalIndex)} // Pass original index
             style={{
-              opacity: (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? 0.5 : 1,
-              pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== idx) || (isOrganizer && !players.includes(nickname)) ? "none" : "auto",
-              borderWidth: mpSelected === idx || (mpShowAnswer && idx === q.correctAnswer) ? 3 : 1, // Thicker border for selected/correct
+              opacity: (mpAnswered && mpSelected !== answer.originalIndex) || (isOrganizer && !players.includes(nickname)) ? 0.5 : 1,
+              pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== answer.originalIndex) || (isOrganizer && !players.includes(nickname)) ? "none" : "auto",
+              borderWidth: mpSelected === answer.originalIndex || (mpShowAnswer && answer.originalIndex === q.correctAnswer) ? 3 : 1, // Thicker border for selected/correct
               // Use theme colors for border
-              borderColor: mpShowAnswer ? (idx === q.correctAnswer ? 'var(--color-success)' : 'var(--color-error)') : (mpSelected === idx ? 'var(--color-secondary)' : 'var(--color-neutral)')
+              borderColor: mpShowAnswer ? (answer.originalIndex === q.correctAnswer ? 'var(--color-success)' : 'var(--color-error)') : (mpSelected === answer.originalIndex ? 'var(--color-secondary)' : 'var(--color-neutral)')
             }}
           >
-            {answer}
-            {mpShowAnswer && idx === q.correctAnswer && (
+            {answer.text} {/* Display the answer text */}
+            {mpShowAnswer && answer.originalIndex === q.correctAnswer && (
               <span className="ml-2 text-success font-bold">(Correct)</span>
             )}
           </button>

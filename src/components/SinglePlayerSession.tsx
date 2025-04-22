@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 
 // Define interfaces for props
@@ -43,6 +43,12 @@ interface SinglePlayerSessionProps {
   onFinish: () => void;
 }
 
+// Define the structure for shuffled answers
+interface ShuffledAnswer {
+  text: string;
+  originalIndex: number;
+}
+
 
 export default function SinglePlayerSession({
   quiz,
@@ -81,15 +87,42 @@ export default function SinglePlayerSession({
 
   const q = questions.length > 0 ? questions[current] : null;
 
+  // State to hold the shuffled answers for the current question
+  const [shuffledAnswers, setShuffledAnswers] = useState<ShuffledAnswer[]>([]);
+
+  // Fisher-Yates (aka Knuth) Shuffle function
+  const shuffleArray = (array: ShuffledAnswer[]) => {
+    let currentIndex = array.length, randomIndex;
+    // While there remain elements to shuffle.
+    while (currentIndex !== 0) {
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+    return array;
+  };
+
+  // Effect to shuffle answers when the question changes
+  useEffect(() => {
+    if (q) {
+      const answersWithOriginalIndex = q.answers.map((text, index) => ({ text, originalIndex: index }));
+      setShuffledAnswers(shuffleArray(answersWithOriginalIndex));
+    }
+  }, [q]); // Dependency array includes q, so it runs when the question object changes
+
+
   // Single player: handle answer click
-  const handleSinglePlayerAnswer = (idx: number) => {
+  const handleSinglePlayerAnswer = (originalIndex: number) => { // Use originalIndex
     if (showAnswer || !q) return;
-    setSpSelected(idx);
+    setSpSelected(originalIndex); // Store the original index
     setShowAnswer(true);
     if (timerRef.current) clearInterval(timerRef.current);
     setNextQuestionTimer(10); // Start 10s countdown
     // Scoring
-    if (q && idx === q.correctAnswer) {
+    if (q && originalIndex === q.correctAnswer) { // Check against original index
       const base = 1000; // Match multiplayer base score
       // Calculate speed bonus based on remaining time
       const timeElapsed = q.time - timer;
@@ -159,28 +192,28 @@ export default function SinglePlayerSession({
         </span>
       </div>
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {q.answers.map((answer: string, idx: number) => (
+        {shuffledAnswers.map((answer: ShuffledAnswer, displayIndex: number) => (
           <button
-            key={idx}
+            key={displayIndex} // Use displayIndex for React key, originalIndex for logic
             className={`w-full px-4 py-2 rounded border text-left transition
               ${
                 showAnswer
-                  ? idx === q.correctAnswer
+                  ? answer.originalIndex === q.correctAnswer
                     ? "bg-success/30 border-success font-bold" // Correct answer shown
-                    : idx === spSelected
+                    : answer.originalIndex === spSelected // Check original index against selected
                     ? "bg-error/20 border-error" // Incorrect selected answer shown
                     : "bg-base-100 border-neutral opacity-60" // Other incorrect answers shown
                   : "bg-base-100 border-neutral hover:bg-secondary/20" // Default answer
               }
             `}
             disabled={showAnswer}
-            onClick={() => handleSinglePlayerAnswer(idx)}
+            onClick={() => handleSinglePlayerAnswer(answer.originalIndex)} // Pass original index
           >
-            {answer}
-            {showAnswer && idx === q.correctAnswer && (
+            {answer.text} {/* Display the answer text */}
+            {showAnswer && answer.originalIndex === q.correctAnswer && (
               <span className="ml-2 text-success font-bold">(Correct)</span>
             )}
-            {showAnswer && idx === spSelected && idx !== q.correctAnswer && (
+            {showAnswer && answer.originalIndex === spSelected && answer.originalIndex !== q.correctAnswer && (
               <span className="ml-2 text-error font-bold">(Your pick)</span>
             )}
           </button>
