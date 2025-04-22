@@ -74,10 +74,21 @@ export default function SearchQuiz() {
     fetchQuizzes();
   }, []);
 
+  // Helper function to remove accents and convert to lowercase
+  const normalizeString = (str: string | undefined | null): string => {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .normalize("NFD") // Decompose combined characters (e.g., 'é' to 'e' + '´')
+      .replace(/[\u0300-\u036f]/g, ""); // Remove diacritical marks
+  };
+
+  const normalizedSearch = normalizeString(search);
+
   const filteredQuizzes = quizzes.filter((quiz) => {
     const matchesSearch =
-      quiz.title?.toLowerCase().includes(search.toLowerCase()) ||
-      quiz.description?.toLowerCase().includes(search.toLowerCase());
+      normalizeString(quiz.title).includes(normalizedSearch) ||
+      normalizeString(quiz.description).includes(normalizedSearch);
     const matchesLanguage =
       selectedLanguage === "" ||
       quiz.language?.toLowerCase() ===
