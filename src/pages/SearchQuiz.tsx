@@ -233,19 +233,6 @@ export default function SearchQuiz() {
               </label>
             </div>
           </div>
-          {/* Popularity Slider */}
-          <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 min-w-[200px] border border-neutral">
-            <ThumbsUp className="w-5 h-5 text-accent mr-2" />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={popularity}
-              onChange={(e) => setPopularity(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <span className="ml-2 text-sm text-gray-600">{popularity}+</span>
-          </div>
           
           {/* Rating Slider */}
           <div className="flex items-center bg-base-100 rounded-lg shadow px-3 py-2 min-w-[200px] border border-neutral">
