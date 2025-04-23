@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // Re-add useNavigate import
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Re-add navigate variable
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +16,8 @@ const Login: React.FC = () => {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate("/"); // Redirect to home on success
+      // Revert back to client-side navigation
+      navigate("/");
     } catch (err: unknown) { // Use unknown for error type
       // Type guard to check if err is an Error object
       if (err instanceof Error) {

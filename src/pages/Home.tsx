@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+// Removed unused import: import Navbar from "../components/Navbar";
 import FeaturedQuizzes from "../components/FeaturedQuizzes";
 import Footer from "../components/Footer";
 import { Rocket } from "lucide-react";
@@ -10,9 +10,10 @@ type HomeProps = {
 
 export default function Home({ user }: HomeProps) {
   return (
+    // Removed redundant Navbar instance from here
     <div className="bg-gradient-to-br from-secondary/20 via-base-100 to-accent/20 min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 pt-20">
+      {/* The main Navbar is rendered in App.tsx */}
+      <main className="flex-1 pt-20"> {/* Keep padding-top if needed for layout under fixed Navbar */}
         {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-8 py-16 flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1">

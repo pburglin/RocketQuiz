@@ -20,6 +20,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true); // Track auth loading state
 
   // Ensure theme is applied on every app load
   useEffect(() => {
@@ -52,14 +53,18 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      setAuthLoading(false); // Set loading to false once auth state is determined
     });
     return () => unsubscribe();
   }, []);
 
   return (
     <Router>
-      <Navbar user={user ? { name: user.email || "User" } : undefined} />
+      {/* Pass user directly, Navbar will handle null/loading */}
+      <Navbar user={user} isLoading={authLoading} />
       <div className="pt-16">
+        {/* Optionally, prevent rendering routes until auth is loaded */}
+        {/* {!authLoading && ( */}
         <Routes>
           <Route path="/" element={<Home user={user} />} />
           <Route path="/search" element={<SearchQuiz />} />
