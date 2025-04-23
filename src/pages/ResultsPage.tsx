@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Leaderboard from "../components/Leaderboard";
 import MultiplayerStatsReport from "../components/MultiplayerStatsReport"; // Import the new component
-import { db } from "../firebaseClient";
+import { db, auth } from "../firebaseClient"; // Import auth
 import {
   doc, getDoc, updateDoc, arrayUnion, increment, setDoc, onSnapshot,
-  collection, getDocs, Timestamp, DocumentSnapshot // Add necessary Firestore imports
+  collection, addDoc, serverTimestamp, getDocs, Timestamp, DocumentSnapshot // Add Firestore functions
 } from "firebase/firestore";
+import { onAuthStateChanged, User } from "firebase/auth"; // Import auth listener and User type
 
 export default function ResultsPage() {
   // Multiplayer: fetch leaderboard and scores from Firestore session doc
@@ -87,6 +88,21 @@ export default function ResultsPage() {
     return "";
   });
   const [isMultiplayer, setIsMultiplayer] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // State for current user
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSuggestion, setReportSuggestion] = useState("");
+
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
   // Multiplayer: fetch leaderboard and scores from Firestore if not in location.state
   useEffect(() => {
     async function fetchMultiplayerResults() {
@@ -325,6 +341,43 @@ export default function ResultsPage() {
     }
   };
 
+  // --- Report Modal Logic ---
+  const handleOpenReportModal = () => {
+    setIsReportModalOpen(true);
+  };
+
+  const handleCloseReportModal = () => {
+    setIsReportModalOpen(false);
+    setReportReason(""); // Clear form on close
+    setReportSuggestion("");
+  };
+
+  const handleReportSubmit = async () => {
+    if (!currentUser || !quiz || !reportReason.trim()) return; // Ensure user, quiz, and reason exist
+
+    try {
+      const reportsCollectionRef = collection(db, "reports");
+      await addDoc(reportsCollectionRef, {
+        quizId: quiz.id,
+        quizTitle: quiz.title, // Store title for easier review
+        userId: currentUser.uid,
+        userEmail: currentUser.email, // Store email for potential contact
+        reason: reportReason.trim(),
+        suggestion: reportSuggestion.trim(), // Store trimmed suggestion
+        timestamp: serverTimestamp(), // Use server timestamp
+        status: "pending", // Initial status
+      });
+      console.log("Report submitted successfully!");
+      alert("Report submitted successfully. Thank you!");
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      alert("Failed to submit report. Please try again later.");
+    } finally {
+      handleCloseReportModal(); // Close modal regardless of success/failure
+    }
+  };
+  // --- End Report Modal Logic ---
+
   // Add debug output
   console.log("Rendering ResultsPage with:", {
     sessionId,
@@ -362,6 +415,17 @@ export default function ResultsPage() {
         showMedals={true}
         onRateQuiz={handleRateQuiz}
       />
+      {/* Conditionally render Report button */}
+      {currentUser && quiz && (
+        <div className="text-center mt-4">
+          <button
+            className="text-sm text-gray-500 hover:text-red-600 underline"
+            onClick={handleOpenReportModal}
+          >
+            Report Quiz Content
+          </button>
+        </div>
+      )}
 
       {/* Conditionally render the stats report for multiplayer */}
       {finalIsMultiplayer && (
@@ -378,6 +442,58 @@ export default function ResultsPage() {
           !isLoadingStats && <div className="mt-8 text-center text-secondary">Could not load detailed statistics for this session.</div>
         )
       )}
+      {/* Report Modal Component */}
+      {isReportModalOpen && quiz && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+             <h2 className="text-xl font-semibold mb-4">Report Quiz Content</h2>
+             <p className="text-sm text-gray-600 mb-2">Quiz: {quiz.title}</p>
+             <div className="mb-4">
+               <label htmlFor="reportReason" className="block text-sm font-medium text-gray-700 mb-1">
+                 Reason for reporting:
+               </label>
+               <textarea
+                 id="reportReason"
+                 rows={3}
+                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                 placeholder="Describe the issue (e.g., incorrect answer, inappropriate content)"
+                 value={reportReason}
+                 onChange={(e) => setReportReason(e.target.value)}
+               />
+             </div>
+             <div className="mb-6">
+               <label htmlFor="reportSuggestion" className="block text-sm font-medium text-gray-700 mb-1">
+                 Suggested correction (optional):
+               </label>
+               <textarea
+                 id="reportSuggestion"
+                 rows={3}
+                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                 placeholder="How should this be corrected?"
+                 value={reportSuggestion}
+                 onChange={(e) => setReportSuggestion(e.target.value)}
+               />
+             </div>
+             <div className="flex justify-end gap-3">
+               <button
+                 type="button"
+                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                 onClick={handleCloseReportModal}
+               >
+                 Cancel
+               </button>
+               <button
+                 type="button"
+                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                 onClick={handleReportSubmit}
+                 disabled={!reportReason.trim()} // Disable if reason is empty
+               >
+                 Submit Report
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 }
