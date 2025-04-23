@@ -20,13 +20,13 @@ interface Quiz {
 }
 
 const allTags = [
-  "Geography",
-  "World",
-  "Science",
-  "Space",
-  "Art",
+  "Movies",
+  "Capitals",
   "History",
-  "Music",
+  "Science",
+  "Geography",
+  "Food",
+  "Anime",
   "Sports",
   "Technology",
   "1stgrade",
@@ -166,15 +166,15 @@ export default function SearchQuiz() {
               <button
                 key={tag}
                 className={`px-2 py-1 rounded-full text-sm border transition ${
-                  selectedTags.includes(tag)
+                  selectedTags.includes(tag.toLowerCase())
                     ? "bg-primary text-white border-primary"
                     : "bg-neutral text-gray-700 border-slate-200 hover:bg-secondary/50"
                 }`}
                 onClick={() =>
                   setSelectedTags((prev) =>
-                    prev.includes(tag)
-                      ? prev.filter((t) => t !== tag)
-                      : [...prev, tag]
+                    prev.includes(tag.toLowerCase())
+                      ? prev.filter((t) => t !== tag.toLowerCase())
+                      : [...prev, tag.toLowerCase()]
                   )
                 }
                 type="button"
