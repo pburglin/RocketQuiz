@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
+import QuizPerformanceGraphs from "./QuizPerformanceGraphs"; // Import the new component
 import { auth, db } from "../firebaseClient"; // Import auth object and db
 import { onAuthStateChanged, User } from "firebase/auth"; // Import listener and User type
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import Firestore functions
@@ -130,7 +131,7 @@ export default function QuizDetails({
         />
       )}
       <div className="mb-4 text-gray-600">{quiz.description}</div>
-      
+
       {/* Display rating if available */}
       {quiz.averageRating !== undefined && (
         <div className="mb-4 flex items-center gap-2">
@@ -143,7 +144,7 @@ export default function QuizDetails({
           </span>
         </div>
       )}
-      <div className="mb-2 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2"> {/* Increased bottom margin */}
         {quiz.tags?.map((tag: string) => (
           <span
             key={tag}
@@ -158,61 +159,77 @@ export default function QuizDetails({
           </span>
         )}
       </div>
-      {/* Collapsible Questions */}
-      <div className="my-6">
-        <button
-          className="px-4 py-2 bg-neutral rounded border border-secondary text-primary font-semibold hover:bg-secondary/50 transition"
-          onClick={() => setQuestionsCollapsed(!questionsCollapsed)}
-        >
-          {questionsCollapsed ? "Show Questions (Spoilers!)" : "Hide Questions"}
-        </button>
-        {!questionsCollapsed && (
-          <div className="mt-4 space-y-2">
-            {questions.map((q, idx) => (
-              <details key={q.id} open={false} className="border rounded p-2">
-                <summary className="font-semibold">
-                  Question {idx + 1}
-                </summary>
-                <div className="mt-2">{q.question}</div>
-              </details>
-            ))}
-          </div>
-        )}
+
+      {/* --- Historical Performance Graphs --- */}
+      <div className="my-8 p-4 border rounded bg-neutral">
+        <h2 className="text-lg font-semibold mb-4 text-primary">Quiz Performance Insights</h2>
+        {/* Render the actual graph component */}
+        <QuizPerformanceGraphs quizId={quiz.id} />
       </div>
+      {/* --- End Historical Performance Graphs --- */}
+
+
       {/* Start Buttons */}
-      <div className="flex gap-4 mt-8">
+      <div className="flex flex-col sm:flex-row gap-4 mt-8"> {/* Stack vertically on small screens */}
         <button
-          className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-accent transition"
+          className="flex-1 px-6 py-3 bg-primary text-white rounded font-bold hover:bg-accent transition text-center" // Increased padding, centered text
           onClick={onStartSinglePlayer}
         >
           Start Single Player
         </button>
         <button
-          className="px-6 py-2 bg-secondary text-primary rounded font-bold hover:bg-accent transition"
+          className="flex-1 px-6 py-3 bg-secondary text-primary rounded font-bold hover:bg-accent transition text-center" // Increased padding, centered text
           onClick={onStartMultiplayer}
         >
           Start Multiplayer
         </button>
       </div>
-      <div className="mt-6">
-        <button
-          className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
-          onClick={onBackToSearch}
+
+      {/* Collapsible Questions & Other Links */}
+      <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4"> {/* Adjusted layout */}
+         <button
+          className="px-4 py-2 bg-neutral rounded border border-secondary text-primary font-semibold hover:bg-secondary/50 transition text-sm" // Smaller text
+          onClick={() => setQuestionsCollapsed(!questionsCollapsed)}
         >
-          Back to Search
+          {questionsCollapsed ? "Show Questions (Spoilers!)" : "Hide Questions"}
         </button>
-        {/* Conditionally render Report button */}
-        {currentUser && (
+
+        <div className="flex gap-4 items-center"> {/* Group Back and Report */}
           <button
-            className="ml-4 text-sm text-gray-500 hover:text-red-600 underline"
-            onClick={handleOpenReportModal}
+            className="text-sm text-primary hover:underline" // Simple link style
+            onClick={onBackToSearch}
           >
-            Report Content
+            Back to Search
           </button>
-        )}
+          {/* Conditionally render Report button */}
+          {currentUser && (
+            <button
+              className="text-sm text-red-600 hover:underline" // Simple link style, red color
+              onClick={handleOpenReportModal}
+            >
+              Report Content
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* TODO: Add Report Modal Component Here */}
+       {/* Questions List (conditionally rendered) */}
+       {!questionsCollapsed && (
+          <div className="mt-4 space-y-2 border-t pt-4"> {/* Added top border */}
+            <h3 className="text-md font-semibold mb-2">Questions:</h3>
+            {questions.map((q, idx) => (
+              <details key={q.id} open={false} className="border rounded p-2 bg-white"> {/* Added bg */}
+                <summary className="font-semibold cursor-pointer"> {/* Added cursor */}
+                  Question {idx + 1}
+                </summary>
+                <div className="mt-2 text-sm">{q.question}</div> {/* Smaller text */}
+              </details>
+            ))}
+          </div>
+        )}
+
+
+      {/* Report Modal */}
       {isReportModalOpen && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
            <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
