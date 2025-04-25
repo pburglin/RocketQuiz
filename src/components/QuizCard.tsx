@@ -1,4 +1,4 @@
-import { Tag } from "lucide-react";
+import { Tag, Play, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
@@ -17,6 +17,8 @@ export default function QuizCard({
     averageRating?: number;
     ratingCount?: number;
     questionCount?: number;
+    totalPlays?: number;
+    uniqueUsers?: number;
   };
 }) {
   return (
@@ -66,6 +68,19 @@ export default function QuizCard({
               {tag}
             </span>
           ))}
+        </div>
+        {/* Stats Section */}
+        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+          {typeof quiz.totalPlays === "number" && (
+            <span className="inline-flex items-center gap-1">
+              <Play className="w-3 h-3" /> {quiz.totalPlays} Play(s)
+            </span>
+          )}
+          {typeof quiz.uniqueUsers === "number" && (
+            <span className="inline-flex items-center gap-1">
+              <Users className="w-3 h-3" /> {quiz.uniqueUsers} Players
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-between mt-auto pt-2">
           <span className="text-xs text-gray-400">{quiz.language}</span>

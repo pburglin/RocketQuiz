@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerSession from "../components/MultiplayerSession";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp } from "firebase/firestore"; // Import Timestamp
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp, increment } from "firebase/firestore"; // Import Timestamp and increment
 // Define the structure of an answer document
 interface AnswerData {
   nickname: string;
@@ -460,6 +460,28 @@ interface Question {
             } catch (error) {
               console.error("Error saving final scores to Firestore:", error);
             }
+
+            // --- BEGIN: Update Quiz Statistics ---
+            if (quiz?.id) {
+              const quizRef = doc(db, "quizzes", quiz.id);
+              try {
+                const currentQuizSnap = await getDoc(quizRef);
+                const currentQuizData = currentQuizSnap.data();
+                const currentMaxPlayers = currentQuizData?.maxUsersPerSession || 0;
+                const sessionPlayerCount = players.length; // Number of players in this session
+
+                await updateDoc(quizRef, {
+                  totalPlays: increment(1),
+                  totalPlayerCountSum: increment(sessionPlayerCount), // Add current session players to sum
+                  maxUsersPerSession: Math.max(currentMaxPlayers, sessionPlayerCount),
+                  lastPlayedAt: serverTimestamp(),
+                });
+                console.log("Successfully updated quiz statistics:", quiz.id);
+              } catch (error) {
+                console.error("Error updating quiz statistics:", error);
+              }
+            }
+            // --- END: Update Quiz Statistics ---
           }
         }
       }}

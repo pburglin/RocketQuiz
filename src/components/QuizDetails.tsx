@@ -5,6 +5,7 @@ import QuizPerformanceGraphs from "./QuizPerformanceGraphs"; // Import the new c
 import { auth, db } from "../firebaseClient"; // Import auth object and db
 import { onAuthStateChanged, User } from "firebase/auth"; // Import listener and User type
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"; // Import Firestore functions
+import { Play, Users, UsersRound, TrendingUp } from "lucide-react"; // Import icons
 
 // Define interfaces locally for type safety
 interface Quiz {
@@ -18,6 +19,11 @@ interface Quiz {
   averageRating?: number;
   ratingCount?: number;
   questionCount?: number;
+  totalPlays?: number;
+  uniqueUsers?: number;
+  averageUsersPerSession?: number;
+  maxUsersPerSession?: number;
+  totalPlayerCountSum?: number; // Added for average calculation
   [key: string]: unknown;
 }
 
@@ -159,6 +165,46 @@ export default function QuizDetails({
           </span>
         )}
       </div>
+
+      {/* --- Quiz Statistics --- */}
+      <div className="my-6 p-4 border rounded bg-base-200 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+        {typeof quiz.totalPlays === 'number' && (
+          <div className="flex flex-col items-center">
+            <Play className="w-6 h-6 mb-1 text-primary" />
+            <span className="text-xl font-semibold">{quiz.totalPlays.toLocaleString()}</span>
+            <span className="text-xs text-gray-500">Total Play(s)</span>
+          </div>
+        )}
+        {typeof quiz.uniqueUsers === 'number' && (
+          <div className="flex flex-col items-center">
+            <Users className="w-6 h-6 mb-1 text-primary" />
+            <span className="text-xl font-semibold">{quiz.uniqueUsers.toLocaleString()}</span>
+            <span className="text-xs text-gray-500">Unique Players</span>
+          </div>
+        )}
+        {/* Calculate Average Players Per Session */}
+        {typeof quiz.totalPlays === 'number' && quiz.totalPlays > 0 && typeof quiz.totalPlayerCountSum === 'number' ? (
+           <div className="flex flex-col items-center">
+            <UsersRound className="w-6 h-6 mb-1 text-secondary" />
+            <span className="text-xl font-semibold">{(quiz.totalPlayerCountSum / quiz.totalPlays).toFixed(1)}</span>
+            <span className="text-xs text-gray-500">Avg. Players/Session</span>
+          </div>
+        ) : typeof quiz.totalPlays === 'number' && ( // Show 0 if totalPlays is 0 but exists
+           <div className="flex flex-col items-center opacity-50"> {/* Dim if zero */}
+            <UsersRound className="w-6 h-6 mb-1 text-secondary" />
+            <span className="text-xl font-semibold">0.0</span>
+            <span className="text-xs text-gray-500">Avg. Players/Session</span>
+          </div>
+        )}
+        {typeof quiz.maxUsersPerSession === 'number' && (
+           <div className="flex flex-col items-center">
+            <TrendingUp className="w-6 h-6 mb-1 text-secondary" />
+            <span className="text-xl font-semibold">{quiz.maxUsersPerSession}</span>
+            <span className="text-xs text-gray-500">Max Players/Session</span>
+          </div>
+        )}
+      </div>
+      {/* --- End Quiz Statistics --- */}
 
       {/* --- Historical Performance Graphs --- */}
       <div className="my-8 p-4 border rounded bg-neutral">
