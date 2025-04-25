@@ -139,6 +139,7 @@ export default function QuizDetailsPage() {
       setQuestionsCollapsed={setQuestionsCollapsed}
       onStartSinglePlayer={() => navigate(`/play/quiz/${id}/single`)}
       onStartMultiplayer={() => navigate(`/play/quiz/${id}/multiplayer/lobby`)}
+      onStartMillionaireChallenge={() => navigate(`/play/quiz/${id}/millionaire`)} // Add handler for new mode
       onBackToSearch={() => navigate("/search")}
     />
   );

@@ -44,6 +44,7 @@ export default function QuizDetails({
   onStartSinglePlayer,
   onStartMultiplayer,
   onBackToSearch,
+  onStartMillionaireChallenge,
 }: {
   quiz: Quiz; // Use Quiz interface
   questions: Question[]; // Use Question interface
@@ -52,6 +53,7 @@ export default function QuizDetails({
   onStartSinglePlayer: () => void;
   onStartMultiplayer: () => void;
   onBackToSearch: () => void;
+  onStartMillionaireChallenge: () => void;
 }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null); // State for current user
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -228,6 +230,12 @@ export default function QuizDetails({
           onClick={onStartMultiplayer}
         >
           Start Multiplayer
+        </button>
+        <button
+          className="flex-1 px-6 py-3 bg-warning text-white rounded font-bold hover:bg-warning-focus transition text-center" // Added button for Millionaire Challenge
+          onClick={onStartMillionaireChallenge}
+        >
+          Start Millionaire Challenge
         </button>
       </div>
 

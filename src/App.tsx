@@ -11,6 +11,7 @@ import ResultsPage from "./pages/ResultsPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import About from "./pages/About";
+import MillionaireChallengePage from "./pages/MillionaireChallengePage"; // Import the new component
 import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
@@ -77,6 +78,7 @@ function App() {
           <Route path="/play/quiz/:id/single" element={<SinglePlayerPage />} />
           <Route path="/play/quiz/:id/multiplayer/lobby" element={<MultiplayerLobbyPage />} />
           <Route path="/play/quiz/:id/multiplayer/game" element={<MultiplayerGamePage />} />
+          <Route path="/play/quiz/:id/millionaire" element={<MillionaireChallengePage />} /> {/* Add the new route */}
           <Route path="/play/quiz/:id/results" element={<ResultsPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
