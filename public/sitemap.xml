@@ -1,29 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <!-- Main pages -->
   <url>
-    <loc>https://rocketquiz.app/</loc>
+    <loc>https://rocketquiz.us/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://rocketquiz.app/search</loc>
+    <loc>https://rocketquiz.us/search</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://rocketquiz.us/create-quiz</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- Authentication pages -->
   <url>
-    <loc>https://rocketquiz.app/create-quiz</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://rocketquiz.app/about</loc>
+    <loc>https://rocketquiz.us/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://rocketquiz.app/privacy</loc>
+    <loc>https://rocketquiz.us/register</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.7</priority>
   </url>
-  <!-- Dynamic pages like /play/quiz/:id are not included as they depend on quiz IDs -->
+  
+  <!-- Information pages -->
+  <url>
+    <loc>https://rocketquiz.us/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rocketquiz.us/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- User pages -->
+  <url>
+    <loc>https://rocketquiz.us/profile</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Note: Dynamic pages like /play/quiz/:id are not included as they depend on quiz IDs -->
 </urlset>

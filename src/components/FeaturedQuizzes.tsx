@@ -47,31 +47,50 @@ export default function FeaturedQuizzes() {
   }, []);
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
-      <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <span>🔥</span> Featured Quizzes
+    <section
+      className="max-w-7xl mx-auto px-4 sm:px-8 py-12"
+      aria-labelledby="featured-quizzes-heading"
+    >
+      <h2
+        id="featured-quizzes-heading"
+        className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2"
+        itemProp="name"
+      >
+        <span aria-hidden="true">🔥</span> Featured Quizzes
       </h2>
-      <div className="flex gap-6 overflow-x-auto pb-2 hide-scrollbar">
+      <div
+        className="flex gap-6 overflow-x-auto pb-2 hide-scrollbar"
+        role="list"
+        aria-label="Featured quizzes collection"
+      >
         {loading ? (
-          <div className="text-gray-500 py-8 px-4">Loading featured quizzes...</div>
+          <div className="text-gray-500 py-8 px-4" aria-live="polite">Loading featured quizzes...</div>
         ) : error ? (
-          <div className="text-red-500 py-8 px-4">{error}</div>
+          <div className="text-red-500 py-8 px-4" aria-live="assertive" role="alert">{error}</div>
         ) : quizzes.length === 0 ? (
-          <div className="text-gray-500 py-8 px-4">No featured quizzes found.</div>
+          <div className="text-gray-500 py-8 px-4" aria-live="polite">No featured quizzes found.</div>
         ) : (
-          quizzes.map((quiz) => (
-            <QuizCard
+          quizzes.map((quiz, index) => (
+            <div
               key={quiz.id}
-              quiz={{
-                id: quiz.id,
-                title: quiz.title ?? "",
-                description: quiz.description ?? "",
-                tags: quiz.tags ?? [],
-                image: quiz.image ?? "",
-                popularity: typeof quiz.popularity === "number" ? quiz.popularity : 0,
-                language: quiz.language ?? "",
-              }}
-            />
+              itemScope
+              itemType="https://schema.org/LearningResource"
+              itemProp="itemListElement"
+              role="listitem"
+            >
+              <meta itemProp="position" content={`${index + 1}`} />
+              <QuizCard
+                quiz={{
+                  id: quiz.id,
+                  title: quiz.title ?? "",
+                  description: quiz.description ?? "",
+                  tags: quiz.tags ?? [],
+                  image: quiz.image ?? "",
+                  popularity: typeof quiz.popularity === "number" ? quiz.popularity : 0,
+                  language: quiz.language ?? "",
+                }}
+              />
+            </div>
           ))
         )}
       </div>

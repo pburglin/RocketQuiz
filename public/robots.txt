@@ -5,5 +5,8 @@ Allow: /
 Disallow: /login
 Disallow: /register
 
+# Disallow any URLs with query parameters
+Disallow: /*?*
+
 # Sitemap location
-Sitemap: https://rocketquiz.app/sitemap.xml
+Sitemap: https://rocketquiz.us/sitemap.xml
