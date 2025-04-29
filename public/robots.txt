@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow login and registration pages
+Disallow: /login
+Disallow: /register
+
+# Sitemap location
+Sitemap: https://rocketquiz.app/sitemap.xml
