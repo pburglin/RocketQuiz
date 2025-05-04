@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import SinglePlayerSession from "../components/SinglePlayerSession";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { Helmet } from 'react-helmet-async';
 
 export default function SinglePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -167,33 +168,39 @@ export default function SinglePlayerPage() {
   }
 
   return (
-    <SinglePlayerSession
-      quiz={quiz}
-      questions={questions}
-      current={current}
-      setCurrent={setCurrent}
-      timer={timer}
-      //setTimer={setTimer} // Remove unused prop
-      showAnswer={showAnswer}
-      setShowAnswer={setShowAnswer}
-      spScore={spScore}
-      setSpScore={setSpScore}
-      spCorrectAnswers={spCorrectAnswers}
-      setSpCorrectAnswers={setSpCorrectAnswers}
-      spCurrentSpeedBonus={spCurrentSpeedBonus}
-      setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
-      spSelected={spSelected}
-      setSpSelected={setSpSelected}
-      nextQuestionTimer={nextQuestionTimer}
-      setNextQuestionTimer={setNextQuestionTimer}
-      timerRef={timerRef}
-      onQuit={() => navigate(`/play/quiz/${id}/details`)}
-      onFinish={() => {
-        // Store the score and correct answers count in localStorage so ResultsPage can access it
-        localStorage.setItem('sp_score', spScore.toString());
-        localStorage.setItem('sp_correctAnswers', spCorrectAnswers.toString());
-        navigate(`/play/quiz/${id}/results`);
-      }}
-    />
+    <>
+      <Helmet>
+        <title>{quiz?.title ? `${quiz.title} - Single Player - RocketQuiz` : 'Single Player Quiz - RocketQuiz'}</title>
+        <meta name="description" content={quiz?.title ? `Play the ${quiz.title} quiz in single-player mode on RocketQuiz.` : 'Play a quiz in single-player mode on RocketQuiz.'} />
+      </Helmet>
+      <SinglePlayerSession
+        quiz={quiz}
+        questions={questions}
+        current={current}
+        setCurrent={setCurrent}
+        timer={timer}
+        //setTimer={setTimer} // Remove unused prop
+        showAnswer={showAnswer}
+        setShowAnswer={setShowAnswer}
+        spScore={spScore}
+        setSpScore={setSpScore}
+        spCorrectAnswers={spCorrectAnswers}
+        setSpCorrectAnswers={setSpCorrectAnswers}
+        spCurrentSpeedBonus={spCurrentSpeedBonus}
+        setSpCurrentSpeedBonus={setSpCurrentSpeedBonus}
+        spSelected={spSelected}
+        setSpSelected={setSpSelected}
+        nextQuestionTimer={nextQuestionTimer}
+        setNextQuestionTimer={setNextQuestionTimer}
+        timerRef={timerRef}
+        onQuit={() => navigate(`/play/quiz/${id}/details`)}
+        onFinish={() => {
+          // Store the score and correct answers count in localStorage so ResultsPage can access it
+          localStorage.setItem('sp_score', spScore.toString());
+          localStorage.setItem('sp_correctAnswers', spCorrectAnswers.toString());
+          navigate(`/play/quiz/${id}/results`);
+        }}
+      />
+    </>
   );
 }

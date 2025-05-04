@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import QuizDetails from "../components/QuizDetails";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs, DocumentData } from "firebase/firestore";
+import { Helmet } from 'react-helmet-async';
 
 // Define interfaces for better type safety
 interface Quiz {
@@ -132,15 +133,21 @@ export default function QuizDetailsPage() {
   }
 
   return (
-    <QuizDetails
-      quiz={quiz!} // Use non-null assertion as we check for null earlier
-      questions={questions}
-      questionsCollapsed={questionsCollapsed}
-      setQuestionsCollapsed={setQuestionsCollapsed}
-      onStartSinglePlayer={() => navigate(`/play/quiz/${id}/single`)}
-      onStartMultiplayer={() => navigate(`/play/quiz/${id}/multiplayer/lobby`)}
-      onStartMillionaireChallenge={() => navigate(`/play/quiz/${id}/millionaire`)} // Add handler for new mode
-      onBackToSearch={() => navigate("/search")}
-    />
+    <>
+      <Helmet>
+        <title>{quiz?.title ? `${quiz.title} - RocketQuiz` : 'Quiz Details - RocketQuiz'}</title>
+        <meta name="description" content={quiz?.description || 'Details about a quiz on RocketQuiz.'} />
+      </Helmet>
+      <QuizDetails
+        quiz={quiz!} // Use non-null assertion as we check for null earlier
+        questions={questions}
+        questionsCollapsed={questionsCollapsed}
+        setQuestionsCollapsed={setQuestionsCollapsed}
+        onStartSinglePlayer={() => navigate(`/play/quiz/${id}/single`)}
+        onStartMultiplayer={() => navigate(`/play/quiz/${id}/multiplayer/lobby`)}
+        onStartMillionaireChallenge={() => navigate(`/play/quiz/${id}/millionaire`)} // Add handler for new mode
+        onBackToSearch={() => navigate("/search")}
+      />
+    </>
   );
 }

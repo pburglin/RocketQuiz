@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react"; // Impo
 import { db } from "../firebaseClient";
 import { collection, addDoc, writeBatch, doc } from "firebase/firestore";
 import { debounce } from 'lodash'; // Import debounce
+import { Helmet } from 'react-helmet-async';
 
 interface Question {
   question: string;
@@ -430,6 +431,10 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
   return (
     <div className="max-w-2xl mx-auto p-4">
+      <Helmet>
+        <title>Create a New Quiz - RocketQuiz</title>
+        <meta name="description" content="Design and build your own interactive quizzes on the RocketQuiz platform." />
+      </Helmet>
       <h1 className="text-2xl font-bold mb-4">Create a New Quiz</h1>
       {error && <div className="mb-4 p-3 rounded text-center bg-error/10 text-error font-medium">{error}</div>} {/* Style error message */}
       {success && <div className="mb-4 p-3 rounded text-center bg-success/10 text-success font-medium">Quiz created successfully!</div>} {/* Style success message */}

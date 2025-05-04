@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Search, Filter, Star, Globe, Tag, ThumbsUp } from "lucide-react";
+import { Search, Filter, Star, Globe, Tag } from "lucide-react";
 import QuizCard from "../components/QuizCard";
 import { db } from "../firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
+import { Helmet } from 'react-helmet-async';
 
 
 // Define the Quiz type based on expected properties
@@ -46,7 +47,6 @@ export default function SearchQuiz() {
   const [search, setSearch] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [popularity, setPopularity] = useState(0);
   const [minRating, setMinRating] = useState(0);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]); // Use the Quiz interface
   const [loading, setLoading] = useState(true);
@@ -96,10 +96,6 @@ export default function SearchQuiz() {
     const matchesTags =
       selectedTags.length === 0 ||
       (quiz.tags && selectedTags.every((tag) => quiz.tags.includes(tag)));
-    // If popularity is not present, treat as 0
-    const quizPopularity = typeof quiz.popularity === "number" ? quiz.popularity : 0;
-    const matchesPopularity = quizPopularity >= popularity;
-
     // If rating is not present, treat as 0
     const quizRating = typeof quiz.averageRating === "number" ? quiz.averageRating : 0;
     const matchesRating = quizRating >= minRating;
@@ -119,12 +115,16 @@ export default function SearchQuiz() {
     }
 
     return (
-      matchesSearch && matchesLanguage && matchesTags && matchesPopularity && matchesGameLength && matchesRating
+      matchesSearch && matchesLanguage && matchesTags && matchesGameLength && matchesRating
     );
   });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 to-accent/20 px-4 py-8">
+      <Helmet>
+        <title>Search Quizzes - RocketQuiz</title>
+        <meta name="description" content="Find and play quizzes on various topics and languages on RocketQuiz." />
+      </Helmet>
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 flex items-center gap-2 text-primary">
           <Filter className="w-7 h-7 text-primary" />

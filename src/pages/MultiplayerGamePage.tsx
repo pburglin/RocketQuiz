@@ -2,44 +2,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerSession from "../components/MultiplayerSession";
 import { db } from "../firebaseClient";
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp, increment } from "firebase/firestore"; // Import Timestamp and increment
-// Define the structure of an answer document
-interface AnswerData {
-  nickname: string;
-  qIdx: number;
-  answer: number;
-  answeredAt: Timestamp; // Use Timestamp type
-  isCorrect: boolean;
-  questionStart?: Timestamp | null; // Optional Timestamp
-}
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp, increment } from "firebase/firestore";
+import { Helmet } from 'react-helmet-async';
+import { Quiz, Question, AnswerData } from "../types";
 
 
 export default function MultiplayerGamePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-// Define Quiz structure
-interface Quiz {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  questionCount: number;
-  tags?: string[]; // Add optional tags
-  image?: string; // Add optional image
-  language?: string; // Add optional language
-  // Add other relevant quiz fields if needed
-}
 
-// Define Question structure (including answers)
-interface Question {
-  id: string;
-  question: string;
-  answers: string[];
-  correctAnswer: number;
-  image?: string; // Optional image URL
-  time: number;
-}
 
   const [quiz, setQuiz] = useState<Quiz | null>(null); // Use Quiz type
   const [questions, setQuestions] = useState<Question[]>([]); // Use Question type
@@ -315,189 +286,194 @@ interface Question {
   }
 
   return (
-    <MultiplayerSession
-      onFinish={async () => {
-        if (!isOrganizer || !sessionId) return;
-        
-        if (current < questions.length - 1) {
-          // Move to next question
-          const sessionRef = doc(db, "sessions", sessionId);
-          await setDoc(sessionRef, {
-            currentQuestion: current + 1,
-            [`questionStartTimes.${current + 1}`]: serverTimestamp(),
-            questionStart: serverTimestamp() // For backward compatibility
-          }, { merge: true });
-        } else {
-          // Last question - finish the game
-          // Fetch all answers for the session
-          console.log("Fetching answers for session:", sessionId);
+    <>
+      <Helmet>
+        <title>{quiz?.title ? `${quiz.title} - Multiplayer Game - RocketQuiz` : 'Multiplayer Game - RocketQuiz'}</title>
+        <meta name="description" content={quiz?.title ? `Playing the ${quiz.title} quiz in multiplayer mode on RocketQuiz.` : 'Play a multiplayer quiz game on RocketQuiz.'} />
+      </Helmet>
+      <MultiplayerSession
+        onFinish={async () => {
+          if (!isOrganizer || !sessionId) return;
           
-          // The structure of answers in Firestore is:
-          // sessions/{sessionId}/answers/{nickname}
-          // with fields: qIdx, answer, answeredAt
-          const answersSnap = await getDocs(collection(db, "sessions", sessionId, "answers"));
-          // Map documents to AnswerData type
-          const allAnswers: AnswerData[] = answersSnap.docs.map((doc) => {
-            return doc.data() as AnswerData; // Cast data to our defined type
-          });
-          
-          console.log("Retrieved answers:", allAnswers);
-          
-          // Fetch session for questionStart times
-          const sessionRef = doc(db, "sessions", sessionId);
-          const sessionSnap = await getDoc(sessionRef);
-          const scores: { [nickname: string]: number } = {}; // Use const
-          let leaderboard: string[] = [];
-          if (sessionSnap.exists()) {
-            // For each question, get questionStart
-            const sessionData = sessionSnap.data();
-            const questionsStart: { [qIdx: number]: number } = {};
-            // Check both field names for backward compatibility
-            if (sessionData.questionStartTimes) {
-              Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]) => { // Remove explicit type annotation
-                if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
-                  questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
-                }
-              });
-            } else if (sessionData.questionStarts) {
-              Object.entries(sessionData.questionStarts).forEach(([qIdx, ts]) => { // Remove explicit type annotation
-                 if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
-                   questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
-                 }
-              });
-            }
-            // Calculate scores
-            console.log("Calculating scores for questions:", questions);
+          if (current < questions.length - 1) {
+            // Move to next question
+            const sessionRef = doc(db, "sessions", sessionId);
+            await setDoc(sessionRef, {
+              currentQuestion: current + 1,
+              [`questionStartTimes.${current + 1}`]: serverTimestamp(),
+              questionStart: serverTimestamp() // For backward compatibility
+            }, { merge: true });
+          } else {
+            // Last question - finish the game
+            // Fetch all answers for the session
+            console.log("Fetching answers for session:", sessionId);
             
-            // Initialize scores for all players
-            players.forEach(player => {
-              scores[player] = 0;
+            // The structure of answers in Firestore is:
+            // sessions/{sessionId}/answers/{nickname}
+            // with fields: qIdx, answer, answeredAt
+            const answersSnap = await getDocs(collection(db, "sessions", sessionId, "answers"));
+            // Map documents to AnswerData type
+            const allAnswers: AnswerData[] = answersSnap.docs.map((doc) => {
+              return doc.data() as AnswerData; // Cast data to our defined type
             });
             
-            // Process each answer
-            allAnswers.forEach((a: AnswerData) => { // Use AnswerData type for 'a'
-              console.log("Processing answer:", a);
-              
-              // For each question the player answered
-              if (typeof a.qIdx === "number" && typeof a.answer === "number") {
-                const qIdx = a.qIdx;
-                const q = questions[qIdx];
-                
-                console.log(`Question ${qIdx}:`, q);
-                console.log(`Player answer: ${a.answer}, Correct answer: ${q?.correctAnswer}`);
-                
-                // Award points for correct answers
-                if (q && a.answer === q.correctAnswer) {
-                  // Base points for correct answer
-                  let points = 1000;
-                  
-                  // Add speed bonus if timing data is available
-                  // First try to use the question start time from the answer object
-                  let questionStartTime = null;
-                  if (a.questionStart && typeof a.questionStart.toMillis === "function") {
-                    questionStartTime = a.questionStart.toMillis();
-                  }
-                  // Fallback to the question start time from the session document
-                  else if (questionsStart[qIdx]) {
-                    questionStartTime = questionsStart[qIdx];
-                  }
-                  
-                  if (typeof a.answeredAt?.toMillis === "function" && questionStartTime) {
-                    const answeredAt = a.answeredAt.toMillis();
-                    const timeTaken = Math.max(0, (answeredAt - questionStartTime) / 1000);
-                    const maxTime = q.time || 30;
-                    
-                    // Enhanced speed bonus calculation - more weight on speed
-                    const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
-                    // Exponential scoring to reward faster answers more significantly
-                    const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
-                    points += speedBonus;
-                    
-                    console.log(`Awarded ${points} points (1000 base + ${speedBonus} speed bonus) to ${a.nickname}`);
-                  } else {
-                    console.log(`Awarded ${points} points (no speed bonus) to ${a.nickname}`);
-                  }
-                  
-                  scores[a.nickname] = (scores[a.nickname] || 0) + points;
-                } else {
-                  console.log(`No points awarded to ${a.nickname} for question ${qIdx}`);
-                }
-              }
-            });
+            console.log("Retrieved answers:", allAnswers);
             
-            console.log("Final calculated scores:", scores);
-            leaderboard = Object.entries(scores)
-              // Sort by top score (highest first)
-              // Note: Currently we only have access to total scores, not individual question scores
-              .sort((a, b) => b[1] - a[1])
-              .map(([nick]) => nick);
-              
-            console.log("Calculated final scores and leaderboard:", { scores, leaderboard });
-            
-            // Make sure we have at least some data
-            if (leaderboard.length === 0 && players.length > 0) {
-              console.log("No scores calculated but we have players. Creating default leaderboard.");
-              leaderboard = players;
-              players.forEach(player => {
-                if (!scores[player]) scores[player] = 0;
-              });
-            }
-            
-            // Write to session doc
-            try {
-              await setDoc(sessionRef, {
-                mpScores: scores,
-                mpLeaderboard: leaderboard,
-                gameFinished: true,
-              }, { merge: true });
-              console.log("Successfully saved final scores and leaderboard to Firestore");
-              
-              // Store in localStorage as backup
-              if (typeof window !== "undefined") {
-                localStorage.setItem("mp_scores", JSON.stringify(scores));
-                localStorage.setItem("mp_leaderboard", JSON.stringify(leaderboard));
-              }
-            } catch (error) {
-              console.error("Error saving final scores to Firestore:", error);
-            }
-
-            // --- BEGIN: Update Quiz Statistics ---
-            if (quiz?.id) {
-              const quizRef = doc(db, "quizzes", quiz.id);
-              try {
-                const currentQuizSnap = await getDoc(quizRef);
-                const currentQuizData = currentQuizSnap.data();
-                const currentMaxPlayers = currentQuizData?.maxUsersPerSession || 0;
-                const sessionPlayerCount = players.length; // Number of players in this session
-
-                await updateDoc(quizRef, {
-                  totalPlays: increment(1),
-                  totalPlayerCountSum: increment(sessionPlayerCount), // Add current session players to sum
-                  maxUsersPerSession: Math.max(currentMaxPlayers, sessionPlayerCount),
-                  lastPlayedAt: serverTimestamp(),
+            // Fetch session for questionStart times
+            const sessionRef = doc(db, "sessions", sessionId);
+            const sessionSnap = await getDoc(sessionRef);
+            const scores: { [nickname: string]: number } = {}; // Use const
+            let leaderboard: string[] = [];
+            if (sessionSnap.exists()) {
+              // For each question, get questionStart
+              const sessionData = sessionSnap.data();
+              const questionsStart: { [qIdx: number]: number } = {};
+              // Check both field names for backward compatibility
+              if (sessionData.questionStartTimes) {
+                Object.entries(sessionData.questionStartTimes).forEach(([qIdx, ts]) => { // Remove explicit type annotation
+                  if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
+                    questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
+                  }
                 });
-                console.log("Successfully updated quiz statistics:", quiz.id);
-              } catch (error) {
-                console.error("Error updating quiz statistics:", error);
+              } else if (sessionData.questionStarts) {
+                Object.entries(sessionData.questionStarts).forEach(([qIdx, ts]) => { // Remove explicit type annotation
+                   if (ts && typeof (ts as Timestamp).toMillis === 'function') { // Check if ts is a Timestamp
+                     questionsStart[Number(qIdx)] = (ts as Timestamp).toMillis();
+                   }
+                 });
               }
+              // Calculate scores
+              console.log("Calculating scores for questions:", questions);
+              
+              // Initialize scores for all players
+              players.forEach(player => {
+                scores[player] = 0;
+              });
+              
+              // Process each answer
+              allAnswers.forEach((a: AnswerData) => { // Use AnswerData type for 'a'
+                console.log("Processing answer:", a);
+                
+                // For each question the player answered
+                if (typeof a.qIdx === "number" && typeof a.answer === "number") {
+                  const qIdx = a.qIdx;
+                  const q = questions[qIdx];
+                  
+                  console.log(`Question ${qIdx}:`, q);
+                  console.log(`Player answer: ${a.answer}, Correct answer: ${q?.correctAnswer}`);
+                  
+                  // Award points for correct answers
+                  if (q && a.answer === q.correctAnswer) {
+                    // Base points for correct answer
+                    let points = 1000;
+                    
+                    // Add speed bonus if timing data is available
+                    // First try to use the question start time from the answer object
+                    let questionStartTime = null;
+                    if (a.questionStart && typeof a.questionStart.toMillis === "function") {
+                      questionStartTime = a.questionStart.toMillis();
+                    }
+                    // Fallback to the question start time from the session document
+                    else if (questionsStart[qIdx]) {
+                      questionStartTime = questionsStart[qIdx];
+                    }
+                    
+                    if (typeof a.answeredAt?.toMillis === "function" && questionStartTime) {
+                      const answeredAt = a.answeredAt.toMillis();
+                      const timeTaken = Math.max(0, (answeredAt - questionStartTime) / 1000);
+                      const maxTime = q.time || 30;
+                      
+                      // Enhanced speed bonus calculation - more weight on speed
+                      const speedFactor = Math.max(0, 1 - (timeTaken / maxTime));
+                      // Exponential scoring to reward faster answers more significantly
+                      const speedBonus = Math.round(1000 * Math.pow(speedFactor, 1.5));
+                      points += speedBonus;
+                      
+                      console.log(`Awarded ${points} points (1000 base + ${speedBonus} speed bonus) to ${a.nickname}`);
+                    } else {
+                      console.log(`Awarded ${points} points (no speed bonus) to ${a.nickname}`);
+                    }
+                    
+                    scores[a.nickname] = (scores[a.nickname] || 0) + points;
+                  } else {
+                    console.log(`No points awarded to ${a.nickname} for question ${qIdx}`);
+                  }
+                }
+              });
+              
+              console.log("Final calculated scores:", scores);
+              leaderboard = Object.entries(scores)
+                // Sort by top score (highest first)
+                // Note: Currently we only have access to total scores, not individual question scores
+                .sort((a, b) => b[1] - a[1])
+                .map(([nick]) => nick);
+                
+              console.log("Calculated final scores and leaderboard:", { scores, leaderboard });
+              
+              // Make sure we have at least some data
+              if (leaderboard.length === 0 && players.length > 0) {
+                console.log("No scores calculated but we have players. Creating default leaderboard.");
+                leaderboard = players;
+                players.forEach(player => {
+                  if (!scores[player]) scores[player] = 0;
+                });
+              }
+              
+              // Write to session doc
+              try {
+                await setDoc(sessionRef, {
+                  mpScores: scores,
+                  mpLeaderboard: leaderboard,
+                  gameFinished: true,
+                }, { merge: true });
+                console.log("Successfully saved final scores and leaderboard to Firestore");
+                
+                // Store in localStorage as backup
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("mp_scores", JSON.stringify(scores));
+                  localStorage.setItem("mp_leaderboard", JSON.stringify(leaderboard));
+                }
+              } catch (error) {
+                console.error("Error saving final scores to Firestore:", error);
+              }
+
+              // --- BEGIN: Update Quiz Statistics ---
+              if (quiz?.id) {
+                const quizRef = doc(db, "quizzes", quiz.id);
+                try {
+                  const currentQuizSnap = await getDoc(quizRef);
+                  const currentQuizData = currentQuizSnap.data();
+                  const currentMaxPlayers = currentQuizData?.maxUsersPerSession || 0;
+                  const sessionPlayerCount = players.length; // Number of players in this session
+
+                  await updateDoc(quizRef, {
+                    totalPlays: increment(1),
+                    totalPlayerCountSum: increment(sessionPlayerCount), // Add current session players to sum
+                    maxUsersPerSession: Math.max(currentMaxPlayers, sessionPlayerCount),
+                    lastPlayedAt: serverTimestamp(),
+                  });
+                  console.log("Successfully updated quiz statistics:", quiz.id);
+                } catch (error) {
+                  console.error("Error updating quiz statistics:", error);
+                }
+              }
+              // --- END: Update Quiz Statistics ---
             }
-            // --- END: Update Quiz Statistics ---
           }
-        }
-      }}
-      quiz={quiz}
-      questions={questions}
-      current={current}
-      setCurrent={setCurrent}
-      mpShowAnswer={mpShowAnswer}
-      setMpShowAnswer={setMpShowAnswer}
-      mpTimer={mpTimer}
-      setMpTimer={setMpTimer}
-      mpAnswered={mpAnswered}
-      setMpAnswered={setMpAnswered}
-      mpAllAnswers={mpAllAnswers}
-      setMpAllAnswers={setMpAllAnswers}
-      mpScores={mpScores}
+        }}
+        quiz={quiz}
+        questions={questions}
+        current={current}
+        setCurrent={setCurrent}
+        mpShowAnswer={mpShowAnswer}
+        setMpShowAnswer={setMpShowAnswer}
+        mpTimer={mpTimer}
+        setMpTimer={setMpTimer}
+        mpAnswered={mpAnswered}
+        setMpAnswered={setMpAnswered}
+        mpAllAnswers={mpAllAnswers}
+        setMpAllAnswers={setMpAllAnswers}
+        mpScores={mpScores}
       setMpScores={setMpScores}
       mpLeaderboard={mpLeaderboard}
       setMpLeaderboard={setMpLeaderboard}
@@ -577,5 +553,6 @@ interface Question {
       }}
       onQuit={() => navigate(`/play/quiz/${id}/details`)}
     />
+    </>
   );
 }

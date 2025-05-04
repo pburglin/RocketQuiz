@@ -4,6 +4,7 @@ import MultiplayerLobby from "../components/MultiplayerLobby";
 import { db } from "../firebaseClient";
 // Remove unused getDocs import
 import { collection, doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { Helmet } from 'react-helmet-async';
 
 // Basic Quiz interface for type safety
 interface Quiz {
@@ -124,26 +125,32 @@ export default function MultiplayerLobbyPage() {
   }
 
   return (
-    <MultiplayerLobby
-      quiz={quiz}
-      sessionId={sessionId}
-      sessionUrl={sessionUrl}
-      nickname={nickname}
-      setNickname={setNickname}
-      nicknameError={nicknameError}
-      setNicknameError={setNicknameError}
-      players={players}
-      isOrganizer={isOrganizer}
-      lobbyLoading={lobbyLoading}
-      setLobbyLoading={setLobbyLoading}
-      setSessionId={setSessionId}
-      setSessionUrl={setSessionUrl}
-      setPlayers={setPlayers}
-      setIsOrganizer={setIsOrganizer}
-      setGameState={() => {}}
-      onBackToQuizDetails={() => navigate(`/play/quiz/${id}/details`)}
-      // Add start game handler for organizer
-      onStartGame={handleStartGame}
-    />
+    <>
+      <Helmet>
+        <title>{quiz?.title ? `${quiz.title} - Multiplayer Lobby - RocketQuiz` : 'Multiplayer Lobby - RocketQuiz'}</title>
+        <meta name="description" content={quiz?.title ? `Join or create a multiplayer lobby for the ${quiz.title} quiz on RocketQuiz.` : 'Join or create a multiplayer quiz lobby on RocketQuiz.'} />
+      </Helmet>
+      <MultiplayerLobby
+        quiz={quiz}
+        sessionId={sessionId}
+        sessionUrl={sessionUrl}
+        nickname={nickname}
+        setNickname={setNickname}
+        nicknameError={nicknameError}
+        setNicknameError={setNicknameError}
+        players={players}
+        isOrganizer={isOrganizer}
+        lobbyLoading={lobbyLoading}
+        setLobbyLoading={setLobbyLoading}
+        setSessionId={setSessionId}
+        setSessionUrl={setSessionUrl}
+        setPlayers={setPlayers}
+        setIsOrganizer={setIsOrganizer}
+        setGameState={() => {}}
+        onBackToQuizDetails={() => navigate(`/play/quiz/${id}/details`)}
+        // Add start game handler for organizer
+        onStartGame={handleStartGame}
+      />
+    </>
   );
 }

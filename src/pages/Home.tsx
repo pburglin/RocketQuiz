@@ -3,6 +3,7 @@ import FeaturedQuizzes from "../components/FeaturedQuizzes";
 import Footer from "../components/Footer";
 import { Rocket } from "lucide-react";
 import { User as FirebaseUser } from "firebase/auth";
+import { Helmet } from 'react-helmet-async';
 
 type HomeProps = {
   user: FirebaseUser | null;
@@ -12,6 +13,10 @@ export default function Home({ user }: HomeProps) {
   return (
     // Removed redundant Navbar instance from here
     <div className="bg-gradient-to-br from-secondary/20 via-base-100 to-accent/20 min-h-screen flex flex-col">
+      <Helmet>
+        <title>RocketQuiz - Create and Play Interactive Quizzes</title>
+        <meta name="description" content="Create and play interactive quizzes with friends in real-time. Challenge yourself in single-player mode or compete in multiplayer games." />
+      </Helmet>
       {/* The main Navbar is rendered in App.tsx */}
       <main className="flex-1 pt-20" itemScope itemType="https://schema.org/WebPage">
         {/* Hero Section */}
