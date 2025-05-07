@@ -2,6 +2,8 @@
 
 RocketQuiz is a modern, production-ready, Kahoot-like quizzer web app built with React, Vite, Tailwind CSS, and Supabase. It supports both anonymous and registered user experiences, real-time multiplayer, and a beautiful, responsive UI.
 
+Check it out here: [https://rocketquiz.us](https://rocketquiz.us)
+
 ---
 
 ## Project Plan
