@@ -1,4 +1,9 @@
 node_modules
 .env
 .env.mistral
+.env.google
 database/migrations/serviceAccountKey.json
+node_modules
+dist
+dist-ssr
+*.local
