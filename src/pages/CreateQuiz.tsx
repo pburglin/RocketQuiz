@@ -388,8 +388,14 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         body: JSON.stringify(payload),
       });
       const responseText = await response.text(); // Reconstruct response handling
-      if (!response.ok) { throw new Error(`LLM API error: ${response.statusText} (status ${response.status})`); }
-      let data; try { data = JSON.parse(responseText); } catch { throw new Error("Failed to parse LLM API response as JSON."); }
+      if (!response.ok) {
+        // Provide user-friendly error messages based on status code
+        if (response.status === 429) {
+          throw new Error("The AI service is temporarily rate-limited. Please wait about a minute and try again.");
+        }
+        throw new Error(`LLM API error: ${response.statusText} (status ${response.status})`);
+      }
+      let data; try { data = JSON.parse(responseText); } catch { throw new Error("There was an issue parsing the AI response. Please try clicking the 'Generate with AI' button again."); }
       const content = data?.choices?.[0]?.message?.content; if (!content) { throw new Error("No content returned from LLM API."); }
       let quizObj;
       try {
@@ -408,11 +414,11 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           } catch (extractionError) {
             console.error("Failed to parse extracted JSON:", extractionError);
             // Throw the original error if extraction also fails, including the full problematic content
-            throw new Error("Failed to parse LLM message content as JSON, even after extraction. Response: " + content);
+            throw new Error("There was an issue parsing the AI response. Please try clicking the 'Generate with AI' button again.");
           }
         } else {
           // Throw the original error if no JSON object markers found
-          throw new Error("Failed to parse LLM message content as JSON and could not find JSON markers. Response: " + content);
+          throw new Error("There was an issue parsing the AI response. Please try clicking the 'Generate with AI' button again.");
         }
       }
       if (!quizObj || !quizObj.questions || !Array.isArray(quizObj.questions)) { throw new Error("Invalid quiz object from LLM API."); }

@@ -40,5 +40,13 @@
   - Added comprehensive validation and user feedback for both URL validation and image generation status.
   - Fixed AI prompt to include image descriptions for questions (previously only quiz level had image descriptions).
 
+- [DONE] **LLM error handling**
+  - when creating new quizzes, sometimes I see message "LLM API error: (status 429)". lets replace this with a more user-friendly message, noting this is rate-limited by the LLM and suggesting the user to try again in a minute. also, sometimes I get JSON parsing erros with the response, if this happens lets suggest the user click the "Generate with AI" button again, this often fixes the problem.
+  - Updated LLM error handling in CreateQuiz.tsx to provide user-friendly error messages
+  - For status 429 errors: "The AI service is temporarily rate-limited. Please wait about a minute and try again."
+  - For JSON parsing errors: "There was an issue parsing the AI response. Please try clicking the 'Generate with AI' button again."
+  - Applied same user-friendly messaging to all JSON parsing fallback scenarios
+  - Successfully tested - build completes without errors
+
 - [HALT] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if enabled only the user who created the quiz can see and play it.
