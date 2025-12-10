@@ -982,8 +982,16 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
             <p className="text-gray-700 mb-4">
               Some images are still being processed (validation or AI generation). You can proceed to create 
               the quiz now. During quiz play, any images that aren't ready will be generated on-demand using 
-              the image descriptions with pollinations.ai service.
+              the image descriptions with pollinations.ai service, but without validating it here it may not work.
             </p>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+              <h4 className="font-semibold text-blue-800 mb-2">Alternative Options:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Make minor changes to image descriptions and wait for regeneration</li>
+                <li>• Switch from image descriptions to direct image URLs</li>
+                <li>• Remove both image URL and image description to use solid color placeholders</li>
+              </ul>
+            </div>
             <p className="text-sm text-gray-600 mb-6">
               Would you like to proceed with creating the quiz anyway?
             </p>
