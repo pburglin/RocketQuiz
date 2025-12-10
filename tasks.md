@@ -15,8 +15,13 @@
   - Music also stops when quiz is quit or completed
   - Handles autoplay restrictions gracefully with user interaction
 
-- [OPEN] **Confetti**
+- [DONE] **Confetti**
   - in all the quiz results pages, show a WebGL confetti effect falling from the top of the screen.
+  - Implemented a WebGL Canvas-based confetti component with customizable particles
+  - Added confetti animation to ResultsPage.tsx for both single-player and multiplayer games
+  - Confetti features: 200 particles, 7 vibrant colors, 6-second duration with gravity and rotation
+  - Component includes proper cleanup and performance optimization
+  - Successfully tested and built without errors
 
 - [DONE] **Images**
   - in CreateQuiz.tsx, we now have both "Quiz Image URL (optional)" and "Quiz Image Description" fields. Users can provide either none, an image URL, or an image description for both the quiz and each question. If both URL and description are provided, the URL takes priority. If none are provided, no image is shown (solid color background). We use the pollinations.ai service as the default for generating images from descriptions: https://image.pollinations.ai/prompt/${encodeURIComponent(description)}?nologo=true&private=true
