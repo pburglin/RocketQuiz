@@ -41,6 +41,10 @@ export default function SinglePlayerPage() {
   const [nextQuestionTimer, setNextQuestionTimer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Music playback state
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   // Clear previous game data from localStorage
   useEffect(() => {
@@ -108,7 +112,51 @@ export default function SinglePlayerPage() {
     fetchQuiz();
   }, [id]);
 
-  // Timer logic
+  // Initialize audio element
+  useEffect(() => {
+    const audio = new Audio('/TickTockTrivia.mp3');
+    audio.loop = true;
+    audio.volume = 0.7; // Set initial volume
+    setAudioRef(audio);
+
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // Fade out and stop music
+  const fadeOutAndStopMusic = () => {
+    if (!audioRef || !isMusicPlaying) return;
+    
+    const fadeOut = () => {
+      if (audioRef.volume > 0.1) {
+        audioRef.volume = Math.max(0, audioRef.volume - 0.1);
+        setTimeout(fadeOut, 100);
+      } else {
+        audioRef.pause();
+        audioRef.currentTime = 0;
+        audioRef.volume = 0.7; // Reset volume for next time
+        setIsMusicPlaying(false);
+      }
+    };
+    fadeOut();
+  };
+
+  // Start music playback
+  const startMusic = () => {
+    if (audioRef && !isMusicPlaying) {
+      audioRef.play().then(() => {
+        setIsMusicPlaying(true);
+      }).catch(error => {
+        console.log('Music autoplay prevented:', error);
+      });
+    }
+  };
+
+  // Timer logic with music control
   useEffect(() => {
     if (questions.length === 0 || current >= questions.length) return;
     setShowAnswer(false);
@@ -122,11 +170,15 @@ export default function SinglePlayerPage() {
           clearInterval(timerRef.current as NodeJS.Timeout);
           setShowAnswer(true);
           setNextQuestionTimer(10); // Start 10s countdown
+          fadeOutAndStopMusic(); // Stop music when timer finishes
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
+    // Start music when timer begins
+    startMusic();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current as NodeJS.Timeout);
@@ -193,11 +245,15 @@ export default function SinglePlayerPage() {
         nextQuestionTimer={nextQuestionTimer}
         setNextQuestionTimer={setNextQuestionTimer}
         timerRef={timerRef}
-        onQuit={() => navigate(`/play/quiz/${id}/details`)}
+        onQuit={() => {
+          fadeOutAndStopMusic(); // Stop music when quitting
+          navigate(`/play/quiz/${id}/details`);
+        }}
         onFinish={() => {
           // Store the score and correct answers count in localStorage so ResultsPage can access it
           localStorage.setItem('sp_score', spScore.toString());
           localStorage.setItem('sp_correctAnswers', spCorrectAnswers.toString());
+          fadeOutAndStopMusic(); // Stop music when finishing quiz
           navigate(`/play/quiz/${id}/results`);
         }}
       />

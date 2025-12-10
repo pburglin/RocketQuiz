@@ -41,6 +41,10 @@ export default function MultiplayerGamePage() {
     return "";
   });
   const [sessionId, setSessionId] = useState<string | null>(null);
+  
+  // Music playback state
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   useEffect(() => {
     async function fetchQuiz() {
@@ -153,7 +157,51 @@ export default function MultiplayerGamePage() {
     return () => unsub();
   }, [sessionId]);
 
-  // Timer logic
+  // Initialize audio element
+  useEffect(() => {
+    const audio = new Audio('/TickTockTrivia.mp3');
+    audio.loop = true;
+    audio.volume = 0.7; // Set initial volume
+    setAudioRef(audio);
+
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // Fade out and stop music
+  const fadeOutAndStopMusic = () => {
+    if (!audioRef || !isMusicPlaying) return;
+    
+    const fadeOut = () => {
+      if (audioRef.volume > 0.1) {
+        audioRef.volume = Math.max(0, audioRef.volume - 0.1);
+        setTimeout(fadeOut, 100);
+      } else {
+        audioRef.pause();
+        audioRef.currentTime = 0;
+        audioRef.volume = 0.7; // Reset volume for next time
+        setIsMusicPlaying(false);
+      }
+    };
+    fadeOut();
+  };
+
+  // Start music playback
+  const startMusic = () => {
+    if (audioRef && !isMusicPlaying) {
+      audioRef.play().then(() => {
+        setIsMusicPlaying(true);
+      }).catch(error => {
+        console.log('Music autoplay prevented:', error);
+      });
+    }
+  };
+
+  // Timer logic with music control
   useEffect(() => {
     if (questions.length === 0 || current >= questions.length) return;
     setMpShowAnswer(false);
@@ -167,11 +215,15 @@ export default function MultiplayerGamePage() {
           clearInterval(timerRef.current as NodeJS.Timeout);
           setMpShowAnswer(true);
           setNextQuestionTimer(10); // Start 10s countdown
+          fadeOutAndStopMusic(); // Stop music when timer finishes
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
+    // Start music when timer begins
+    startMusic();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current as NodeJS.Timeout);
@@ -305,6 +357,8 @@ export default function MultiplayerGamePage() {
             }, { merge: true });
           } else {
             // Last question - finish the game
+            fadeOutAndStopMusic(); // Stop music when finishing quiz
+            
             // Fetch all answers for the session
             console.log("Fetching answers for session:", sessionId);
             
@@ -551,7 +605,10 @@ export default function MultiplayerGamePage() {
           console.error("Error writing answer to Firestore", err);
         }
       }}
-      onQuit={() => navigate(`/play/quiz/${id}/details`)}
+      onQuit={() => {
+        fadeOutAndStopMusic(); // Stop music when quitting
+        navigate(`/play/quiz/${id}/details`);
+      }}
     />
     </>
   );
