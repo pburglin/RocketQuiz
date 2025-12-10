@@ -5,14 +5,28 @@ import { Rocket } from "lucide-react";
 import { User as FirebaseUser } from "firebase/auth";
 import { Helmet } from 'react-helmet-async';
 
+// Holiday Edition Components
+import SnowEffect from "../components/SnowEffect";
+import Ribbon from "../components/Ribbon";
+
 type HomeProps = {
   user: FirebaseUser | null;
 };
 
 export default function Home({ user }: HomeProps) {
+  // Check if Holiday Edition is enabled
+  const isHolidaysEditionEnabled = import.meta.env.VITE_HOLIDAYS_EDITION_ENABLED === 'true';
+
   return (
     // Removed redundant Navbar instance from here
     <div className="bg-gradient-to-br from-secondary/20 via-base-100 to-accent/20 min-h-screen flex flex-col">
+      {/* Holiday Edition Features */}
+      {isHolidaysEditionEnabled && (
+        <>
+          <SnowEffect intensity={120} maxSize={6} minSize={2} />
+          <Ribbon text="Sindhu Edition" />
+        </>
+      )}
       <Helmet>
         <title>RocketQuiz - Create and Play Interactive Quizzes</title>
         <meta name="description" content="Create and play interactive quizzes with friends in real-time. Challenge yourself in single-player mode or compete in multiplayer games." />

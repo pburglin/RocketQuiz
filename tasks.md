@@ -4,8 +4,18 @@
 
 ## Priority: High
 
-- [OPEN] **Holidays Edition**
+- [DONE] **Holidays Edition**
   - in the landing page: in the top right add a diagonal red ribbon with white font label "Sindhu Edition"; implement a WebGL snow falling effect; control both the ribbon and the snow fall effect via a feature toggle config in .env file.
+  - Added feature toggle `VITE_HOLIDAYS_EDITION_ENABLED` to .env and .env.example files
+  - Created SnowEffect component with customizable snow particles, wind drift, and sparkle effects
+  - Created Ribbon component with diagonal positioning and professional styling
+  - Updated Home.tsx to conditionally render holiday features based on environment variable
+  - Successfully tested implementation - build completes without errors
+  - Both snow effect and ribbon appear on landing page when feature is enabled
+  - Fixed ribbon text centering issue - adjusted positioning and added flexbox centering for better text visibility
+  - Enhanced ribbon design with angled ends using CSS clip-path for a professional ribbon appearance
+  - Applied gradient background and improved shadow effects for visual appeal
+  - Implemented text counter-skewing to maintain horizontal text while preserving angled ribbon shape
 
 - [DONE] **Music**
   - play song public/TickTockTrivia.mp3 during the quiz countdown. when the timer is finished, quickly fade out the music then stop playing.
@@ -30,5 +40,5 @@
   - Added comprehensive validation and user feedback for both URL validation and image generation status.
   - Fixed AI prompt to include image descriptions for questions (previously only quiz level had image descriptions).
 
-- [OPEN] **Private Quizzes**
+- [HALT] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if enabled only the user who created the quiz can see and play it.
