@@ -16,8 +16,8 @@ const Ribbon: React.FC<RibbonProps> = ({
       style={{
         position: 'fixed',
         top: '70px',
-        right: '-30px',
-        transform: 'rotate(45deg)',
+        left: '-10px',
+        transform: 'rotate(-45deg)',
         backgroundColor,
         color: textColor,
         padding: '10px 40px',
