@@ -45,6 +45,9 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [aiLoading, setAILoading] = useState(false);
   const [aiError, setAIError] = useState<string | null>(null);
 
+  // Confirmation modal state for proceeding with incomplete image generation
+  const [showImageGenerationModal, setShowImageGenerationModal] = useState(false);
+
   // Ref to store debounced validators for question images, keyed by index
   const debouncedQuestionValidators = useRef<Map<number, ReturnType<typeof debounce>>>(new Map());
   
@@ -498,42 +501,54 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     e.preventDefault();
 
     // --- Pre-submission Validation ---
-    // Check main quiz image URL validation
-    if (quizImageValidationStatus === 'validating' || quizImageValidationStatus === 'invalid') {
+    // Check main quiz image URL validation - only show errors for actually invalid images, not validating ones
+    if (quizImageValidationStatus === 'invalid') {
         if (image.trim()) { // Only show error if URL is provided
             setError("Please provide a valid URL for the main quiz image or leave it empty.");
             return;
         }
     }
 
-    // Check image generation status
-    if (imageGenerationStatus === 'generating') {
-        setError("Please wait for image generation to complete.");
-        return;
-    }
-
+    // Check image generation status for main quiz image - only show errors for failed generations
     if (imageGenerationStatus === 'error' && imageDescription.trim()) {
         setError("Failed to generate image from description. Please check your description or try again.");
         return;
     }
 
-    // Check all question images validation
+    // Check all question images validation - only show errors for actually invalid/failed, not validating ones
     const invalidQuestionImage = questions.find(q => 
-        (q.image && (q.imageValidationStatus === 'validating' || q.imageValidationStatus === 'invalid')) ||
-        (q.imageDescription && q.imageDescriptionGenerationStatus === 'generating') ||
+        (q.image && q.imageValidationStatus === 'invalid') ||
         (q.imageDescription && q.imageDescriptionGenerationStatus === 'error')
     );
     if (invalidQuestionImage) {
         const invalidIndex = questions.findIndex(q => q === invalidQuestionImage);
-        const issueType = invalidQuestionImage.image && (invalidQuestionImage.imageValidationStatus === 'validating' || invalidQuestionImage.imageValidationStatus === 'invalid') 
+        const issueType = invalidQuestionImage.image && invalidQuestionImage.imageValidationStatus === 'invalid' 
             ? 'URL' 
             : 'description';
         setError(`Please fix the image ${issueType} in Question ${invalidIndex + 1} or leave it empty.`);
         return;
     }
+
+    // Check if there are any images still processing (generating, validating, etc.) - show modal for confirmation
+    const hasIncompleteImages = 
+        imageGenerationStatus === 'generating' || 
+        quizImageValidationStatus === 'validating' ||
+        questions.some(q => 
+            q.image && q.imageValidationStatus === 'validating' ||
+            q.imageDescription && q.imageDescriptionGenerationStatus === 'generating'
+        );
+    
+    if (hasIncompleteImages) {
+        setShowImageGenerationModal(true);
+        return; // Stop here, wait for user confirmation
+    }
     // --- End Pre-submission Validation ---
 
+    // If no generating images, proceed with submission
+    await proceedWithSubmission();
+  };
 
+  const proceedWithSubmission = async () => {
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -601,6 +616,17 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmIncompleteImages = async () => {
+    setShowImageGenerationModal(false);
+    await proceedWithSubmission();
+  };
+
+  const handleCancelIncompleteImages = () => {
+    setShowImageGenerationModal(false);
+    // Clear any existing error to avoid confusion
+    setError(null);
   };
 
   if (!user) {
@@ -947,6 +973,40 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           {loading ? "Creating..." : "Create Quiz"}
         </button>
       </form>
+
+      {/* Image Generation In Progress Modal */}
+      {showImageGenerationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-3">Images Still Processing</h3>
+            <p className="text-gray-700 mb-4">
+              Some images are still being processed (validation or AI generation). You can proceed to create 
+              the quiz now. During quiz play, any images that aren't ready will be generated on-demand using 
+              the image descriptions with pollinations.ai service.
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              Would you like to proceed with creating the quiz anyway?
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                onClick={handleCancelIncompleteImages}
+              >
+                Wait for Images
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+                onClick={handleConfirmIncompleteImages}
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Quiz Anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
