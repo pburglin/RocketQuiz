@@ -375,7 +375,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       const payload = { // Reconstruct payload
         model: modelName,
         messages: [
-          { role: "system", content: "You are an assistant that generates quizzes based on user descriptions. Respond ONLY with a valid JSON object representing the quiz structure. Do NOT include any introductory text, explanations, or conversational filler. The JSON object should have keys like 'title', 'description', 'language', 'tags' (array of strings), 'imageDescription' (optional description for AI image generation), and 'questions' (array of objects). Each question object should have 'question', 'answers' (array of 4 strings), 'correctAnswer' (0-based index), 'image' (optional URL), 'imageDescription' (optional description for AI image generation), and 'time' (number in seconds)." },
+          { role: "system", content: "You are an assistant that generates quizzes based on user descriptions. Respond ONLY with a valid JSON object representing the quiz structure. Do NOT include any introductory text, explanations, or conversational filler.\n\nIMPORTANT: All 'imageDescription' fields should only contain lowercase alphanumeric characters (lowercase letters and numbers) and spaces. Do not use uppercase letters, punctuation, special characters, or symbols in image descriptions.\n\nExample of a good JSON response:\n{\n  \"title\": \"Dog Breeds Quiz\",\n  \"description\": \"Test your knowledge about different dog breeds with this 5-question quiz.\",\n  \"language\": \"English\",\n  \"tags\": [\"dog breeds\", \"animals\", \"quiz\"],\n  \"imageDescription\": \"cute dog playing in grass\",\n  \"questions\": [\n    {\n      \"question\": \"Which dog breed is known for its large size and friendly nature, often referred to as the 'gentle giant'?\",\n      \"answers\": [\n        \"German Shepherd\",\n        \"Great Dane\",\n        \"Dachshund\",\n        \"Corgi\"\n      ],\n      \"correctAnswer\": 1,\n      \"imageDescription\": \"great dane running in fields\",\n      \"time\": 30\n    },\n    {\n      \"question\": \"Which breed is known for its distinctive blue-black tongue?\",\n      \"answers\": [\n        \"Chow chow\",\n        \"Coton des poitou\",\n        \"Shiba inu\",\n        \"Basenji\"\n      ],\n      \"correctAnswer\": 0,\n      \"imageDescription\": \"chow chow perched on sofa\",\n      \"time\": 25\n    },\n    {\n      \"question\": \"What small breed is known for its bat-like ears and strong hunting instincts?\",\n      \"answers\": [\n        \"Pomeranian\",\n        \"Finnish Spitz\",\n        \"Bichon Frise\",\n        \"Shiba Inu\"\n      ],\n      \"correctAnswer\": 1,\n      \"imageDescription\": \"finnish spitz in snow\",\n      \"time\": 35\n    },\n    {\n      \"question\": \"Which dog breed is popularly called the 'barkless dog' because of its low bark sound?\",\n      \"answers\": [\n        \"Basenji\",\n        \"Bulldog\",\n        \"Beagle\",\n        \"Poodle\"\n      ],\n      \"correctAnswer\": 0,\n      \"imageDescription\": \"basenji standing by river\",\n      \"time\": 20\n    },\n    {\n      \"question\": \"Which breed gained international fame as a canine diplomat in the 1950s?\",\n      \"answers\": [\n        \"Labrador Retriever\",\n        \"Maltese\",\n        \"Cavalier King Charles Spaniel\",\n        \"Bichon Frise\"\n      ],\n      \"correctAnswer\": 2,\n      \"imageDescription\": \"cavalier king charles spaniel in embassy\",\n      \"time\": 40\n    }\n  ]\n}" },
           { role: "user", content: aiDescription }
         ]
       };
@@ -396,11 +396,14 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         throw new Error(`LLM API error: ${response.statusText} (status ${response.status})`);
       }
       let data; try { data = JSON.parse(responseText); } catch { throw new Error("There was an issue parsing the AI response. Please try clicking the 'Generate with AI' button again."); }
+      console.log("[AI GENERATE] Raw API response data:", data);
       const content = data?.choices?.[0]?.message?.content; if (!content) { throw new Error("No content returned from LLM API."); }
+      console.log("[AI GENERATE] LLM content response:", content);
       let quizObj;
       try {
         // First, try parsing the trimmed content directly
         quizObj = JSON.parse(content.trim());
+        console.log("[AI GENERATE] Successfully parsed quiz object:", quizObj);
       } catch (parseError) {
         // If direct parsing fails, try extracting the JSON object
         console.warn("Direct JSON parsing failed, attempting extraction:", parseError);
@@ -410,7 +413,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           const jsonString = content.substring(startIndex, endIndex + 1);
           try {
             quizObj = JSON.parse(jsonString);
-            console.log("Successfully extracted and parsed JSON.");
+            console.log("[AI GENERATE] Successfully extracted and parsed JSON:", quizObj);
           } catch (extractionError) {
             console.error("Failed to parse extracted JSON:", extractionError);
             // Throw the original error if extraction also fails, including the full problematic content

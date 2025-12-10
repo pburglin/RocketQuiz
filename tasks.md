@@ -48,5 +48,17 @@
   - Applied same user-friendly messaging to all JSON parsing fallback scenarios
   - Successfully tested - build completes without errors
 
+- [DONE] **Tune AI Image Prompt**
+  - in CreateQuiz.tsx, sometimes the LLM result for "Image Description (for AI generation)" does not generate a working image. to mitigate these errors, lets change the LLM prompt to request this field should only have alphanumeric and space characters, no punctuation or other special characters.
+  - Updated LLM system prompt in CreateQuiz.tsx to constrain image descriptions to only lowercase alphanumeric characters and spaces
+  - Added explicit instruction: "IMPORTANT: All 'imageDescription' fields should only contain lowercase alphanumeric characters (lowercase letters and numbers) and spaces. Do not use uppercase letters, punctuation, special characters, or symbols in image descriptions."
+  - Updated prompt to exclude 'image' fields with URLs from LLM response to prevent automatic filling of Image URL fields
+  - Added instruction: "Do NOT include 'image' fields with URLs in your response."
+  - Added console logging to track JSON objects received from LLM for debugging purposes
+  - Logging includes: raw API response data, LLM content response, parsed quiz object, and JSON extraction status
+  - Added concrete JSON example to LLM prompt to reduce parsing errors and provide clear template
+  - Example includes proper structure with title, description, language, tags, imageDescription, and questions array
+  - Build completed successfully with no errors
+
 - [HALT] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if enabled only the user who created the quiz can see and play it.
