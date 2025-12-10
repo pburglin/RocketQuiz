@@ -76,7 +76,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     try {
       //const encodedDescription = encodeURIComponent(description.trim());
       const encodedDescription = description.trim();
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true&height=160`;
       
       // Validate the generated URL by making a quick HEAD request
       const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' });
@@ -192,7 +192,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setImageGenerationStatus('generating');
       try {
         const encodedDescription = encodeURIComponent(description.trim());
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true`;
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true&height=160`;
         
         // Validate the generated URL by making a quick HEAD request
         const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' });
