@@ -60,5 +60,19 @@
   - Example includes proper structure with title, description, language, tags, imageDescription, and questions array
   - Build completed successfully with no errors
 
+- [DONE] in CreateQuiz.tsx for the quiz and for each question we show 2 image fields: image URL and image description. User is supposed to enter value only for one of them, which makes the user experience unnecessary complicated and counterintuitive. Instead, lets consolidate these 2 fields into a single optional "Image" field, with a subtitle that tells user to enter either an image URL or an image description. If value starts with HTTP, we handle it as an image URL. If not, we handle as an image description and use the existing Pollinations.ai implementation to generate the image URL. We simplify percistency logic by storing only one field for the image URL, either the one the user provided, or the one we generated for Pollinations.ai.
+  - Consolidated dual image fields into single smart "Image" field that detects URL vs description
+  - Updated Question interface to use single image field instead of separate URL/description fields
+  - Implemented intelligent handling: URLs (starting with HTTP) are validated, descriptions generate AI images
+  - Simplified persistence by storing only final image URL (user URL or generated URL)
+  - Updated UI with clear placeholder text and combined validation/generation indicators
+  - Build completed successfully with no TypeScript errors
+
+- [OPEN] implement WebGL animation effect during the quiz with movement in sync with the song beat. Change the color of the WebGL effect from green, to orange to red the closer we are for the timer to end.
+
+- [OPEN] in README.md and About screen, credit "Suno.com" for the music. "Pollinations.ai" for image generation. "Netlify.com" for hosting the app. Google Firebase for persistence.
+
+- [OPEN] in multiplayer quizzes, lets implement a control to let quiz host user turn music volume down for all quiz players. show the music controls in the quiz lobby and during the quiz, but only for the quiz host user. the quiz host user can lower the volume all the way down to zero, completely turning off the music. as the volume is changed, all players registered for the multiplayer quiz also have their music volume updated to match the configuration set by the quiz host user.
+
 - [HALT] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if enabled only the user who created the quiz can see and play it.

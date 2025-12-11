@@ -8,8 +8,7 @@ interface Question {
   question: string;
   answers: string[];
   correctAnswer: number;
-  image?: string;
-  imageDescription?: string;
+  image: string; // Single field: URL (starts with HTTP) or description (for AI generation)
   time: number; // seconds
   // Add validation status and preview URL
   imageValidationStatus?: 'idle' | 'validating' | 'valid' | 'invalid';
@@ -23,18 +22,16 @@ import { User as FirebaseUser } from "firebase/auth";
 const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [imageDescription, setImageDescription] = useState("");
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>("");
-  const [imageGenerationStatus, setImageGenerationStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
-  
-  // Add back the image URL field
+  // Single image field that handles both URL and description
   const [image, setImage] = useState("");
-  const [quizImageValidationStatus, setQuizImageValidationStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
-  const [quizImagePreviewUrl, setQuizImagePreviewUrl] = useState<string | null>(null);
+  const [imageValidationStatus, setImageValidationStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageGenerationStatus, setImageGenerationStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string>("");
   const [language, setLanguage] = useState("");
   const [tags, setTags] = useState("");
   const [questions, setQuestions] = useState<Question[]>([
-    { question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", imageDescription: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null },
+    { question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null },
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +48,29 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   // Ref to store debounced validators for question images, keyed by index
   const debouncedQuestionValidators = useRef<Map<number, ReturnType<typeof debounce>>>(new Map());
   
+  // Function to determine if input is URL or description
+  const isImageUrl = useCallback((input: string): boolean => {
+    return input.trim().toLowerCase().startsWith('http');
+  }, []);
+
+  // Function to generate image from description
+  const generateImageFromDescription = useCallback(async (description: string): Promise<string | null> => {
+    try {
+      const encodedDescription = description.trim();
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true&height=160`;
+      
+      // Validate the generated URL by making a quick HEAD request
+      const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' });
+      if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
+        return imageUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error("Image generation error:", error);
+      return null;
+    }
+  }, []);
+
   // Debounced function to generate image from description for specific question
   const generateQuestionImage = useCallback(async (qIndex: number, description: string) => {
     if (!description.trim()) {
@@ -74,31 +94,15 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     });
 
     try {
-      //const encodedDescription = encodeURIComponent(description.trim());
-      const encodedDescription = description.trim();
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true&height=160`;
-      
-      // Validate the generated URL by making a quick HEAD request
-      const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' });
-      if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
-        setQuestions(prevQuestions => {
-          const updated = [...prevQuestions];
-          if (updated[qIndex]) {
-            updated[qIndex].generatedImageUrl = imageUrl;
-            updated[qIndex].imageDescriptionGenerationStatus = 'success';
-          }
-          return updated;
-        });
-      } else {
-        setQuestions(prevQuestions => {
-          const updated = [...prevQuestions];
-          if (updated[qIndex]) {
-            updated[qIndex].generatedImageUrl = null;
-            updated[qIndex].imageDescriptionGenerationStatus = 'error';
-          }
-          return updated;
-        });
-      }
+      const generatedUrl = await generateImageFromDescription(description);
+      setQuestions(prevQuestions => {
+        const updated = [...prevQuestions];
+        if (updated[qIndex]) {
+          updated[qIndex].generatedImageUrl = generatedUrl;
+          updated[qIndex].imageDescriptionGenerationStatus = generatedUrl ? 'success' : 'error';
+        }
+        return updated;
+      });
     } catch (error) {
       console.error("Question image generation error:", error);
       setQuestions(prevQuestions => {
@@ -110,7 +114,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         return updated;
       });
     }
-  }, []);
+  }, [generateImageFromDescription]);
 
   // Debounced generators for question image descriptions
   const debouncedQuestionGenerators = useRef<Map<number, ReturnType<typeof debounce>>>(new Map());
@@ -172,63 +176,71 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     });
   }, []); // Depends only on setQuestions
 
-  // Debounced validation function for the main quiz image
-  const debouncedValidateQuizImage = useCallback(
-    debounce((url: string) => {
-      validateImageUrl(url, setQuizImageValidationStatus, setQuizImagePreviewUrl);
-    }, 500), // 500ms debounce delay
-    [validateImageUrl]
-  );
-
-  // Debounced function to generate image from description
-  const debouncedGenerateImage = useCallback(
-    debounce(async (description: string) => {
-      if (!description.trim()) {
+  // Debounced function to handle quiz image changes (URL validation or description generation)
+  const debouncedHandleQuizImage = useCallback(
+    debounce(async (inputValue: string) => {
+      if (!inputValue.trim()) {
+        setImageValidationStatus('idle');
+        setImagePreviewUrl(null);
         setImageGenerationStatus('idle');
         setGeneratedImageUrl("");
         return;
       }
-      
-      setImageGenerationStatus('generating');
-      try {
-        const encodedDescription = encodeURIComponent(description.trim());
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedDescription}?nologo=true&height=160`;
-        
-        // Validate the generated URL by making a quick HEAD request
-        const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' });
-        if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
-          setGeneratedImageUrl(imageUrl);
-          setImageGenerationStatus('success');
-        } else {
-          setImageGenerationStatus('error');
-          setGeneratedImageUrl("");
-        }
-      } catch (error) {
-        console.error("Image generation error:", error);
-        setImageGenerationStatus('error');
+
+      if (isImageUrl(inputValue)) {
+        // Handle as URL - validate it
+        setImageValidationStatus('validating');
+        setImagePreviewUrl(null);
+        setImageGenerationStatus('idle');
         setGeneratedImageUrl("");
+        
+        try {
+          const response = await fetch(inputValue, { method: 'HEAD', mode: 'cors' });
+          if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
+            setImageValidationStatus('valid');
+            setImagePreviewUrl(inputValue);
+          } else {
+            setImageValidationStatus('invalid');
+            setImagePreviewUrl(null);
+          }
+        } catch (error) {
+          console.error("Image validation error:", error);
+          setImageValidationStatus('invalid');
+          setImagePreviewUrl(null);
+        }
+      } else {
+        // Handle as description - generate image
+        setImageValidationStatus('idle');
+        setImagePreviewUrl(null);
+        setImageGenerationStatus('generating');
+        
+        try {
+          const generatedUrl = await generateImageFromDescription(inputValue);
+          if (generatedUrl) {
+            setGeneratedImageUrl(generatedUrl);
+            setImageGenerationStatus('success');
+          } else {
+            setGeneratedImageUrl("");
+            setImageGenerationStatus('error');
+          }
+        } catch (error) {
+          console.error("Image generation error:", error);
+          setGeneratedImageUrl("");
+          setImageGenerationStatus('error');
+        }
       }
     }, 1000), // 1 second debounce
-    []
+    [isImageUrl, generateImageFromDescription]
   );
 
-  // Effect to generate image when description changes
+  // Effect to handle quiz image changes
   useEffect(() => {
-    debouncedGenerateImage(imageDescription);
+    debouncedHandleQuizImage(image);
     // Cleanup function to cancel any pending debounced calls
     return () => {
-      debouncedGenerateImage.cancel();
+      debouncedHandleQuizImage.cancel();
     };
-  }, [imageDescription, debouncedGenerateImage]);
-
-  // Effect to validate main quiz image URL when it changes
-  useEffect(() => {
-    debouncedValidateQuizImage(image);
-    // Cleanup function to cancel any pending debounced calls
-    return () => {
-      debouncedValidateQuizImage.cancel();
-    };
-  }, [image, debouncedValidateQuizImage]);
+  }, [image, debouncedHandleQuizImage]);
 
   // --- End Image Validation Logic ---
 
@@ -258,7 +270,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const addQuestion = () => {
     setQuestions([
       ...questions,
-      { question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", imageDescription: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null },
+      { question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null },
     ]);
     // No need to create validator here, will be created on first change
   };
@@ -306,59 +318,72 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
             updated[qIndex].image = value;
             updated[qIndex].imageValidationStatus = 'idle'; // Reset status on manual change
             updated[qIndex].imagePreviewUrl = null;
-        }
-        return updated;
-    });
-
-    // Get or create the debounced validator for this question index
-    let validator = debouncedQuestionValidators.current.get(qIndex);
-    if (!validator) {
-      validator = debounce(async (url: string) => { // Make the debounced function async
-        // Create temporary state setters for this specific validation call
-        let tempStatus: 'idle' | 'validating' | 'valid' | 'invalid' = 'idle';
-        let tempPreviewUrl: string | null = null;
-        const setTempStatus: React.Dispatch<React.SetStateAction<'idle' | 'validating' | 'valid' | 'invalid'>> = (newStatus) => {
-            tempStatus = typeof newStatus === 'function' ? newStatus(tempStatus) : newStatus; // Handle functional updates if needed, though unlikely here
-        };
-        const setTempPreviewUrl: React.Dispatch<React.SetStateAction<string | null>> = (newUrl) => {
-            tempPreviewUrl = typeof newUrl === 'function' ? newUrl(tempPreviewUrl) : newUrl;
-        };
-
-        // Call the generic validator with the temporary setters
-        await validateImageUrl(url, setTempStatus, setTempPreviewUrl);
-
-        // Update the actual question state using the results stored in temp variables
-        updateQuestionValidationState(qIndex, tempStatus, tempPreviewUrl);
-
-      }, 500); // 500ms debounce
-      debouncedQuestionValidators.current.set(qIndex, validator);
-    }
-    // Call the debounced validator
-    validator(value);
-  };
-
-  const handleQuestionImageDescriptionChange = (qIndex: number, value: string) => {
-    // Update the image description value immediately
-    setQuestions(prevQuestions => {
-        const updated = [...prevQuestions];
-        if (updated[qIndex]) {
-            updated[qIndex].imageDescription = value;
-            updated[qIndex].imageDescriptionGenerationStatus = 'idle'; // Reset status on manual change
+            updated[qIndex].imageDescriptionGenerationStatus = 'idle';
             updated[qIndex].generatedImageUrl = null;
         }
         return updated;
     });
 
-    // Get or create the debounced generator for this question index
-    let generator = debouncedQuestionGenerators.current.get(qIndex);
-    if (!generator) {
-      generator = debounce((description: string) => {
-        generateQuestionImage(qIndex, description);
+    if (!value.trim()) return;
+
+    // Get or create the debounced handler for this question index
+    let handler = debouncedQuestionValidators.current.get(qIndex);
+    if (!handler) {
+      handler = debounce(async (inputValue: string) => {
+        if (!inputValue.trim()) {
+          updateQuestionValidationState(qIndex, 'idle', null);
+          setQuestions(prevQuestions => {
+            const updated = [...prevQuestions];
+            if (updated[qIndex]) {
+              updated[qIndex].imageDescriptionGenerationStatus = 'idle';
+              updated[qIndex].generatedImageUrl = null;
+            }
+            return updated;
+          });
+          return;
+        }
+
+        if (isImageUrl(inputValue)) {
+          // Handle as URL - validate it
+          updateQuestionValidationState(qIndex, 'validating', null);
+          setQuestions(prevQuestions => {
+            const updated = [...prevQuestions];
+            if (updated[qIndex]) {
+              updated[qIndex].imageDescriptionGenerationStatus = 'idle';
+              updated[qIndex].generatedImageUrl = null;
+            }
+            return updated;
+          });
+          
+          try {
+            const response = await fetch(inputValue, { method: 'HEAD', mode: 'cors' });
+            if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
+              updateQuestionValidationState(qIndex, 'valid', inputValue);
+            } else {
+              updateQuestionValidationState(qIndex, 'invalid', null);
+            }
+          } catch (error) {
+            console.error("Question image validation error:", error);
+            updateQuestionValidationState(qIndex, 'invalid', null);
+          }
+        } else {
+          // Handle as description - generate image
+          updateQuestionValidationState(qIndex, 'idle', null);
+          setQuestions(prevQuestions => {
+            const updated = [...prevQuestions];
+            if (updated[qIndex]) {
+              updated[qIndex].imageDescriptionGenerationStatus = 'generating';
+            }
+            return updated;
+          });
+          
+          generateQuestionImage(qIndex, inputValue);
+        }
       }, 1000); // 1 second debounce
-      debouncedQuestionGenerators.current.set(qIndex, generator);
+      debouncedQuestionValidators.current.set(qIndex, handler);
     }
-    // Call the debounced generator
-    generator(value);
+    // Call the debounced handler
+    handler(value);
   };
 
 
@@ -435,8 +460,8 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setDescription(quizObj.description || "");
       setLanguage(quizObj.language || "");
       setTags(Array.isArray(quizObj.tags) ? quizObj.tags.join(", ") : (quizObj.tags || ""));
-      const quizImageDescription = quizObj.imageDescription || quizObj.imageDescription || "";
-      setImageDescription(quizImageDescription); // This triggers the useEffect for image generation
+      const quizImage = quizObj.imageDescription || quizObj.image || "";
+      setImage(quizImage); // This triggers the useEffect for image handling
 
       // Define a type for the AI question structure
       interface AIQuestion {
@@ -450,18 +475,16 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
       // Map questions but defer validation triggering
       const mappedQuestions = quizObj.questions.map((q: AIQuestion, index: number) => {
-        const imageUrl = q.image || "";
-        const imageDescription = q.imageDescription || "";
+        const imageValue = q.image || q.imageDescription || "";
         return {
           question: q.question || "",
           answers: Array.isArray(q.answers) ? q.answers : ["", "", "", ""],
           correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-          image: imageUrl,
-          imageDescription: imageDescription,
+          image: imageValue,
           time: typeof q.time === 'number' ? q.time : 30,
-          imageValidationStatus: imageUrl ? 'idle' : undefined, // Start as idle
+          imageValidationStatus: imageValue && isImageUrl(imageValue) ? 'idle' : undefined, // Start as idle for URLs
           imagePreviewUrl: null,
-          imageDescriptionGenerationStatus: imageDescription ? 'idle' : 'idle',
+          imageDescriptionGenerationStatus: imageValue && !isImageUrl(imageValue) ? 'idle' : 'idle',
           generatedImageUrl: null,
         };
       });
@@ -474,16 +497,13 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           // Add types here: q is Question (our interface), index is number
           mappedQuestions.forEach((q: Question, index: number) => {
             if (q.image) {
-              handleQuestionImageChange(index, q.image); // Use the handler to trigger validation
-            }
-            if (q.imageDescription) {
-              handleQuestionImageDescriptionChange(index, q.imageDescription); // Use the handler to trigger image generation
+              handleQuestionImageChange(index, q.image); // Use the handler to trigger validation/generation
             }
           });
-      // Also explicitly trigger image generation if description provided by AI,
-      // as the useEffect might run before quizObj.imageDescription is set
-      if (quizImageDescription) {
-          debouncedGenerateImage(quizImageDescription);
+      // Also explicitly trigger image handling if image provided by AI,
+      // as the useEffect might run before quizObj.image is set
+      if (quizImage) {
+          debouncedHandleQuizImage(quizImage);
       }
       }, 0); // Schedule validation triggers for the next event loop tick
 
@@ -501,16 +521,14 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     e.preventDefault();
 
     // --- Pre-submission Validation ---
-    // Check main quiz image URL validation - only show errors for actually invalid images, not validating ones
-    if (quizImageValidationStatus === 'invalid') {
-        if (image.trim()) { // Only show error if URL is provided
-            setError("Please provide a valid URL for the main quiz image or leave it empty.");
-            return;
-        }
+    // Check main quiz image validation - only show errors for actually invalid images, not validating ones
+    if (image.trim() && imageValidationStatus === 'invalid') {
+        setError("Please provide a valid image URL or description, or leave it empty.");
+        return;
     }
 
     // Check image generation status for main quiz image - only show errors for failed generations
-    if (imageGenerationStatus === 'error' && imageDescription.trim()) {
+    if (imageGenerationStatus === 'error' && image.trim() && !isImageUrl(image)) {
         setError("Failed to generate image from description. Please check your description or try again.");
         return;
     }
@@ -518,11 +536,11 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     // Check all question images validation - only show errors for actually invalid/failed, not validating ones
     const invalidQuestionImage = questions.find(q => 
         (q.image && q.imageValidationStatus === 'invalid') ||
-        (q.imageDescription && q.imageDescriptionGenerationStatus === 'error')
+        (q.image && !isImageUrl(q.image) && q.imageDescriptionGenerationStatus === 'error')
     );
     if (invalidQuestionImage) {
         const invalidIndex = questions.findIndex(q => q === invalidQuestionImage);
-        const issueType = invalidQuestionImage.image && invalidQuestionImage.imageValidationStatus === 'invalid' 
+        const issueType = invalidQuestionImage.imageValidationStatus === 'invalid' 
             ? 'URL' 
             : 'description';
         setError(`Please fix the image ${issueType} in Question ${invalidIndex + 1} or leave it empty.`);
@@ -532,10 +550,10 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
     // Check if there are any images still processing (generating, validating, etc.) - show modal for confirmation
     const hasIncompleteImages = 
         imageGenerationStatus === 'generating' || 
-        quizImageValidationStatus === 'validating' ||
+        imageValidationStatus === 'validating' ||
         questions.some(q => 
-            q.image && q.imageValidationStatus === 'validating' ||
-            q.imageDescription && q.imageDescriptionGenerationStatus === 'generating'
+            q.imageValidationStatus === 'validating' ||
+            (!isImageUrl(q.image) && q.imageDescriptionGenerationStatus === 'generating')
         );
     
     if (hasIncompleteImages) {
@@ -562,9 +580,10 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         createdBy: user?.uid || null,
         language: language.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        // Prioritize URL over generated image from description
-        image: image.trim() || generatedImageUrl.trim(),
-        imageDescription: imageDescription.trim(), // Store the description
+        // Store the final image URL (either user URL or generated from description)
+        image: image.trim() ? 
+          (isImageUrl(image) ? image.trim() : (generatedImageUrl.trim() || image.trim())) 
+          : "",
         questionCount: questions.length, // Add question count
         questionsCount: questions.length,
       });
@@ -574,14 +593,15 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
 
       questions.forEach((q) => { // Remove unused qIdx
         const questionRef = doc(collection(db, "quizzes", quizRef.id, "questions"));
-        // Prioritize URL over generated image from description
-        const finalImageUrl = q.image?.trim() || q.generatedImageUrl?.trim() || "";
+        // Store the final image URL (either user URL or generated from description)
+        const finalImageUrl = q.image?.trim() ? 
+          (isImageUrl(q.image) ? q.image.trim() : (q.generatedImageUrl?.trim() || q.image.trim())) 
+          : "";
         batch.set(questionRef, {
           question: q.question,
           correctAnswer: q.correctAnswer,
           createdAt: new Date(),
           image: finalImageUrl,
-          imageDescription: q.imageDescription?.trim() || "", // Store the description
           time: q.time,
         });
   
@@ -601,15 +621,14 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setTitle("");
       setDescription("");
       setImage("");
-      setImageDescription("");
       setGeneratedImageUrl("");
       setLanguage("");
       setTags("");
-      setQuestions([{ question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", imageDescription: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null }]);
+      setQuestions([{ question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null }]);
       // Reset image generation state
       setImageGenerationStatus('idle');
-      setQuizImageValidationStatus('idle');
-      setQuizImagePreviewUrl(null);
+      setImageValidationStatus('idle');
+      setImagePreviewUrl(null);
     } catch (err) {
       console.error("Quiz creation error:", err);
       setError("Failed to create quiz.");
@@ -705,76 +724,47 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
           />
         </div>
         <div>
-          <label className="block font-semibold">Quiz Image (optional)</label>
-          <p className="text-sm text-gray-600 mb-2">Provide either an image URL or description. If both are provided, the URL takes priority.</p>
+          <label className="block font-semibold">Image (optional)</label>
+          <p className="text-sm text-gray-600 mb-2">Enter either an image URL (starting with HTTP) or describe the image you want to generate with AI.</p>
           
-          {/* Image URL Field */}
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Image URL</label>
-            <div className="flex items-center space-x-2">
-              <input
-                className="flex-grow border rounded p-2"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="https://example.com/quiz-image.jpg"
-                type="url"
-              />
-              {/* Validation Status Indicator */}
-              {quizImageValidationStatus === 'validating' && (
-                <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {quizImageValidationStatus === 'invalid' && image && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              {/* Image Preview */}
-              {quizImageValidationStatus === 'valid' && quizImagePreviewUrl && (
-                <img src={quizImagePreviewUrl} alt="Quiz preview" className="h-10 w-10 object-cover rounded border" />
-              )}
-            </div>
-            {quizImageValidationStatus === 'invalid' && image && (
-              <p className="text-error text-sm mt-1">Invalid or inaccessible image URL.</p>
+          <div className="flex items-center space-x-2">
+            <input
+              className="flex-grow border rounded p-2"
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+              placeholder="https://example.com/quiz-image.jpg OR describe the image you want"
+              type="text"
+            />
+            {/* Image Generation/Validation Status Indicator */}
+            {(imageValidationStatus === 'validating' || imageGenerationStatus === 'generating') && (
+              <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {(imageValidationStatus === 'invalid' || imageGenerationStatus === 'error') && image && (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {/* Image Preview */}
+            {imageValidationStatus === 'valid' && imagePreviewUrl && (
+              <img src={imagePreviewUrl} alt="Quiz preview" className="h-10 w-10 object-cover rounded border" />
+            )}
+            {imageGenerationStatus === 'success' && generatedImageUrl && (
+              <img src={generatedImageUrl} alt="Generated quiz image" className="h-10 w-10 object-cover rounded border" />
             )}
           </div>
           
-          {/* Image Description Field */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Image Description (for AI generation)</label>
-            <div className="flex items-center space-x-2">
-              <input
-                className="flex-grow border rounded p-2"
-                value={imageDescription}
-                onChange={(e) => setImageDescription(e.target.value)}
-                placeholder="Describe the image you want for your quiz"
-              />
-              {/* Image Generation Status Indicator */}
-              {imageGenerationStatus === 'generating' && (
-                <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {imageGenerationStatus === 'error' && imageDescription && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              {/* Generated Image Preview */}
-              {imageGenerationStatus === 'success' && generatedImageUrl && (
-                <img src={generatedImageUrl} alt="Generated quiz image" className="h-10 w-10 object-cover rounded border" />
-              )}
-            </div>
-            {imageGenerationStatus === 'error' && imageDescription && (
-              <p className="text-error text-sm mt-1">Failed to generate image. Please try a different description.</p>
-            )}
-            {imageGenerationStatus === 'success' && (
-              <p className="text-success text-sm mt-1">Image generated successfully!</p>
-            )}
-          </div>
+          {imageValidationStatus === 'invalid' && image && (
+            <p className="text-error text-sm mt-1">Invalid or inaccessible image URL.</p>
+          )}
+          {imageGenerationStatus === 'error' && image && !isImageUrl(image) && (
+            <p className="text-error text-sm mt-1">Failed to generate image. Please try a different description.</p>
+          )}
+          {imageGenerationStatus === 'success' && (
+            <p className="text-success text-sm mt-1">Image generated successfully!</p>
+          )}
         </div>
         <div>
           <label className="block font-semibold">Language</label>
@@ -831,76 +821,46 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
                 placeholder="Enter question"
               />
               <div className="mb-2">
-                <label className="block text-sm font-semibold">Question Image (optional)</label>
-                <p className="text-xs text-gray-600 mb-2">Provide either an image URL or description. If both are provided, the URL takes priority.</p>
+                <label className="block text-sm font-semibold">Image (optional)</label>
+                <p className="text-xs text-gray-600 mb-2">Enter either an image URL (starting with HTTP) or describe the image you want to generate with AI.</p>
                 
-                {/* Image URL Field */}
-                <div className="mb-2">
-                  <label className="block text-xs font-medium mb-1">Image URL</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      className="flex-grow border rounded p-2 text-sm"
-                      value={q.image || ""}
-                      onChange={(e) => handleQuestionImageChange(qIdx, e.target.value)}
-                      placeholder="https://example.com/question-image.jpg"
-                      type="url"
-                    />
-                    {/* Validation Status Indicator */}
-                    {q.imageValidationStatus === 'validating' && (
-                      <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    )}
-                    {q.imageValidationStatus === 'invalid' && q.image && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {/* Image Preview */}
-                    {q.imageValidationStatus === 'valid' && q.imagePreviewUrl && (
-                      <img src={q.imagePreviewUrl} alt={`Question ${qIdx + 1} preview`} className="h-8 w-8 object-cover rounded border" />
-                    )}
-                  </div>
-                  {q.imageValidationStatus === 'invalid' && q.image && (
-                    <p className="text-error text-xs mt-1">Invalid or inaccessible image URL.</p>
+                <div className="flex items-center space-x-2">
+                  <input
+                    className="flex-grow border rounded p-2 text-sm"
+                    value={q.image || ""}
+                    onChange={(e) => handleQuestionImageChange(qIdx, e.target.value)}
+                    placeholder="https://example.com/question-image.jpg OR describe the image"
+                    type="text"
+                  />
+                  {/* Validation/Generation Status Indicator */}
+                  {(q.imageValidationStatus === 'validating' || q.imageDescriptionGenerationStatus === 'generating') && (
+                    <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {(q.imageValidationStatus === 'invalid' || q.imageDescriptionGenerationStatus === 'error') && q.image && (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {/* Image Preview */}
+                  {q.imageValidationStatus === 'valid' && q.imagePreviewUrl && (
+                    <img src={q.imagePreviewUrl} alt={`Question ${qIdx + 1} preview`} className="h-8 w-8 object-cover rounded border" />
+                  )}
+                  {q.imageDescriptionGenerationStatus === 'success' && q.generatedImageUrl && (
+                    <img src={q.generatedImageUrl} alt={`Generated image for Question ${qIdx + 1}`} className="h-8 w-8 object-cover rounded border" />
                   )}
                 </div>
-                
-                {/* Image Description Field */}
-                <div>
-                  <label className="block text-xs font-medium mb-1">Image Description (for AI generation)</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      className="flex-grow border rounded p-2 text-sm"
-                      value={q.imageDescription || ""}
-                      onChange={(e) => handleQuestionImageDescriptionChange(qIdx, e.target.value)}
-                      placeholder="Describe the image you want for this question"
-                    />
-                    {/* Image Generation Status Indicator */}
-                    {q.imageDescriptionGenerationStatus === 'generating' && (
-                      <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    )}
-                    {q.imageDescriptionGenerationStatus === 'error' && q.imageDescription && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {/* Generated Image Preview */}
-                    {q.imageDescriptionGenerationStatus === 'success' && q.generatedImageUrl && (
-                      <img src={q.generatedImageUrl} alt={`Generated image for Question ${qIdx + 1}`} className="h-8 w-8 object-cover rounded border" />
-                    )}
-                  </div>
-                  {q.imageDescriptionGenerationStatus === 'error' && q.imageDescription && (
-                    <p className="text-error text-xs mt-1">Failed to generate image. Please try a different description.</p>
-                  )}
-                  {q.imageDescriptionGenerationStatus === 'success' && (
-                    <p className="text-success text-xs mt-1">Image generated successfully!</p>
-                  )}
-                </div>
+                {q.imageValidationStatus === 'invalid' && q.image && (
+                  <p className="text-error text-xs mt-1">Invalid or inaccessible image URL.</p>
+                )}
+                {q.imageDescriptionGenerationStatus === 'error' && q.image && !isImageUrl(q.image) && (
+                  <p className="text-error text-xs mt-1">Failed to generate image. Please try a different description.</p>
+                )}
+                {q.imageDescriptionGenerationStatus === 'success' && (
+                  <p className="text-success text-xs mt-1">Image generated successfully!</p>
+                )}
               </div>
               <div className="mb-2">
                 <label className="block text-sm">Time for this question (seconds)</label>
