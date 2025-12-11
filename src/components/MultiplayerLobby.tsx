@@ -31,6 +31,9 @@ interface MultiplayerLobbyProps {
   setGameState: (g: unknown) => void; // Use unknown instead of any
   onBackToQuizDetails: () => void;
   onStartGame: () => void;
+  // Add music volume props
+  hostMusicVolume: number;
+  onMusicVolumeChange: (volume: number) => void;
 }
 
 
@@ -49,6 +52,9 @@ export default function MultiplayerLobby({
   setPlayers,
   onBackToQuizDetails,
   onStartGame,
+  // Add music volume props
+  hostMusicVolume,
+  onMusicVolumeChange,
 }: MultiplayerLobbyProps) { // Use the defined interface
   // State for "Copied" tooltip
   const [copied, setCopied] = useState(false);
@@ -200,6 +206,36 @@ export default function MultiplayerLobby({
               ))}
             </ul>
           </div>
+          {/* Music Volume Control for Host */}
+          {isOrganizer && (
+            <div className="mb-4 p-4 bg-base-100 rounded-lg border border-neutral">
+              <div className="font-semibold mb-2 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.816L4.414 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.414l3.969-3.816a1 1 0 011.617.816zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 11-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.895-4.21-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                </svg>
+                Music Volume Control (Host Only)
+              </div>
+              <div className="text-sm text-gray-600 mb-3">
+                Adjust the music volume for all players in this quiz session.
+              </div>
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={hostMusicVolume}
+                  onChange={(e) => onMusicVolumeChange(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Off</span>
+                  <span className="font-semibold text-primary">{Math.round(hostMusicVolume * 100)}%</span>
+                  <span>Max</span>
+                </div>
+              </div>
+            </div>
+          )}
           {isOrganizer && (
             <button
               className="px-6 py-2 bg-secondary text-primary rounded font-bold hover:bg-accent disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition"

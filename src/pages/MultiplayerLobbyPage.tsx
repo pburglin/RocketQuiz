@@ -32,6 +32,7 @@ export default function MultiplayerLobbyPage() {
   const [players, setPlayers] = useState<string[]>([]);
   const [isOrganizer, setIsOrganizer] = useState<boolean>(false);
   const [lobbyLoading, setLobbyLoading] = useState<boolean>(false);
+  const [hostMusicVolume, setHostMusicVolume] = useState<number>(0.7);
 
   // Clear previous game data from localStorage when entering lobby
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function MultiplayerLobbyPage() {
         quizId: id,
         createdAt: serverTimestamp(),
         started: false,
+        hostMusicVolume: 0.7,
       }).then(() => {
         setSessionId(newSessionId);
         setSessionUrl(`${window.location.origin}/play/quiz/${id}/multiplayer/lobby?session=${newSessionId}`);
@@ -103,6 +105,10 @@ export default function MultiplayerLobbyPage() {
       if (snap.exists() && snap.data().started) {
         navigate(`/play/quiz/${id}/multiplayer/game?session=${sessionId}`);
       }
+      // Listen for host music volume changes
+      if (snap.exists() && typeof snap.data().hostMusicVolume === 'number') {
+        setHostMusicVolume(snap.data().hostMusicVolume);
+      }
     });
     return () => unsub();
   }, [sessionId, id, navigate]);
@@ -114,6 +120,13 @@ export default function MultiplayerLobbyPage() {
     const sessionRef = doc(db, "sessions", sessionId);
     await setDoc(sessionRef, { started: true }, { merge: true });
     navigate(`/play/quiz/${id}/multiplayer/game?session=${sessionId}`);
+  };
+
+  // Update host music volume
+  const handleMusicVolumeChange = async (volume: number) => {
+    if (!sessionId || !isOrganizer) return;
+    const sessionRef = doc(db, "sessions", sessionId);
+    await setDoc(sessionRef, { hostMusicVolume: volume }, { merge: true });
   };
 
   if (!quiz) {
@@ -150,6 +163,9 @@ export default function MultiplayerLobbyPage() {
         onBackToQuizDetails={() => navigate(`/play/quiz/${id}/details`)}
         // Add start game handler for organizer
         onStartGame={handleStartGame}
+        // Add music volume props
+        hostMusicVolume={hostMusicVolume}
+        onMusicVolumeChange={handleMusicVolumeChange}
       />
     </>
   );

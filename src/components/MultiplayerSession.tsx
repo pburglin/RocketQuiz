@@ -3,6 +3,7 @@ import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import SmartImage from "./SmartImage";
 import { UserAvatar } from "./index";
 import { Timestamp } from "firebase/firestore"; // Import Timestamp
+import ConfirmModal from "./ConfirmModal";
 
 // Define interfaces for props
 interface Quiz {
@@ -69,6 +70,9 @@ interface MultiplayerSessionProps {
   triggerExplosion?: boolean;
   onExplosionComplete?: () => void;
   onTriggerExplosion?: () => void;
+  // Add music volume props
+  hostMusicVolume?: number;
+  onMusicVolumeChange?: (volume: number) => void;
 }
 
 // Define the structure for shuffled answers
@@ -110,13 +114,18 @@ export default function MultiplayerSession({
   isOrganizer,
   triggerExplosion = false,
   onExplosionComplete,
-  onTriggerExplosion
+  onTriggerExplosion,
+  // Add music volume props
+  hostMusicVolume = 0.7,
+  onMusicVolumeChange,
 }: MultiplayerSessionProps) { // Use the defined interface
   const q = questions.length > 0 ? questions[current] : null;
   const isLastQuestion = current === questions.length - 1;
 
   // State to hold the shuffled answers for the current question
   const [shuffledAnswers, setShuffledAnswers] = useState<ShuffledAnswer[]>([]);
+  // State for quit confirmation modal
+  const [showQuitModal, setShowQuitModal] = useState(false);
 
   // Fisher-Yates (aka Knuth) Shuffle function
   const shuffleArray = (array: ShuffledAnswer[]) => { // Use specific type
@@ -184,6 +193,26 @@ export default function MultiplayerSession({
           Time left: {mpTimer} second{mpTimer !== 1 ? "s" : ""}
         </span>
       </div>
+      {/* Music Volume Control for Host during game */}
+      {isOrganizer && (
+        <div className="mb-4 p-3 bg-base-100 rounded-lg border border-neutral">
+          <div className="font-semibold mb-2 flex items-center gap-2 text-sm">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.816L4.414 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.414l3.969-3.816a1 1 0 011.617.816zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 11-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.895-4.21-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+            </svg>
+            Music Volume: {Math.round(hostMusicVolume * 100)}%
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={hostMusicVolume}
+            onChange={(e) => onMusicVolumeChange && onMusicVolumeChange(parseFloat(e.target.value))}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+          />
+        </div>
+      )}
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         {shuffledAnswers.map((answer: ShuffledAnswer, displayIndex: number) => (
           <button
@@ -314,10 +343,8 @@ export default function MultiplayerSession({
       <div className="flex justify-between">
         <button
           className="px-4 py-2 bg-neutral border border-secondary text-primary rounded hover:bg-secondary/50 transition"
-          // Quit button logic might need adjustment based on whether organizer can quit etc.
-          // Keeping original disabled logic for now
-          disabled={!isOrganizer || nextQuestionTimer === null || nextQuestionTimer > 0}
-          onClick={onQuit}
+          disabled={!isOrganizer}
+          onClick={() => setShowQuitModal(true)}
         >
           Quit
         </button>
@@ -356,6 +383,22 @@ export default function MultiplayerSession({
           </button>
         )}
       </div>
+      
+      {/* Quit Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showQuitModal}
+        onClose={() => setShowQuitModal(false)}
+        onConfirm={() => {
+          if (onQuit) {
+            onQuit();
+          }
+        }}
+        title="Quit Multiplayer Quiz"
+        message="Are you sure you want to quit this multiplayer quiz? This will end the game for all players and take you back to the quiz details page."
+        confirmText="Quit Quiz"
+        cancelText="Continue Playing"
+        variant="danger"
+      />
     </div>
   );
 }

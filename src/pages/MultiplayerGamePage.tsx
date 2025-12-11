@@ -43,6 +43,7 @@ export default function MultiplayerGamePage() {
     return "";
   });
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [hostMusicVolume, setHostMusicVolume] = useState<number>(0.7);
   
   // Music playback state
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
@@ -149,9 +150,18 @@ export default function MultiplayerGamePage() {
       if (snap.exists() && snap.data().gameFinished) {
         navigate(`/play/quiz/${id}/results?session=${sessionId}`);
       }
+      // Listen for host music volume changes
+      if (snap.exists() && typeof snap.data().hostMusicVolume === 'number') {
+        const newVolume = snap.data().hostMusicVolume;
+        setHostMusicVolume(newVolume);
+        // Update audio volume in real-time
+        if (audioRef) {
+          audioRef.volume = newVolume * settings.musicVolume;
+        }
+      }
     });
     return () => unsub();
-  }, [sessionId, id, navigate]);
+  }, [sessionId, id, navigate, audioRef, settings.musicVolume]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -165,7 +175,7 @@ export default function MultiplayerGamePage() {
   useEffect(() => {
     const audio = new Audio('/TickTockTrivia.mp3');
     audio.loop = true;
-    audio.volume = settings.musicVolume; // Use settings volume
+    audio.volume = hostMusicVolume * settings.musicVolume; // Use host volume * user settings
     setAudioRef(audio);
 
     return () => {
@@ -174,7 +184,7 @@ export default function MultiplayerGamePage() {
         audio.currentTime = 0;
       }
     };
-  }, []);
+  }, [hostMusicVolume, settings.musicVolume]);
 
   // Fade out and stop music
   const fadeOutAndStopMusic = () => {
@@ -187,7 +197,7 @@ export default function MultiplayerGamePage() {
       } else {
         audioRef.pause();
         audioRef.currentTime = 0;
-        audioRef.volume = settings.musicVolume; // Reset volume for next time
+        audioRef.volume = hostMusicVolume * settings.musicVolume; // Reset volume for next time
         setIsMusicPlaying(false);
       }
     };
@@ -203,6 +213,13 @@ export default function MultiplayerGamePage() {
         console.log('Music autoplay prevented:', error);
       });
     }
+  };
+
+  // Update host music volume
+  const handleMusicVolumeChange = async (volume: number) => {
+    if (!sessionId || !isOrganizer) return;
+    const sessionRef = doc(db, "sessions", sessionId);
+    await setDoc(sessionRef, { hostMusicVolume: volume }, { merge: true });
   };
 
   // Timer logic with music control
@@ -626,6 +643,9 @@ export default function MultiplayerGamePage() {
           fadeOutAndStopMusic(); // Stop music when quitting
           navigate(`/play/quiz/${id}/details`);
         }}
+        // Add music volume props
+        hostMusicVolume={hostMusicVolume}
+        onMusicVolumeChange={handleMusicVolumeChange}
       />
     </>
   );
