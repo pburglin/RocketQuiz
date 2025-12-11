@@ -30,6 +30,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>("");
   const [language, setLanguage] = useState("");
   const [tags, setTags] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([
     { question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null },
   ]);
@@ -460,6 +461,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setDescription(quizObj.description || "");
       setLanguage(quizObj.language || "");
       setTags(Array.isArray(quizObj.tags) ? quizObj.tags.join(", ") : (quizObj.tags || ""));
+      setIsPrivate(false); // Default to public for AI generated quizzes
       const quizImage = quizObj.imageDescription || quizObj.image || "";
       setImage(quizImage); // This triggers the useEffect for image handling
 
@@ -580,6 +582,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
         createdBy: user?.uid || null,
         language: language.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+        isPrivate: isPrivate,
         // Store the final image URL (either user URL or generated from description)
         image: image.trim() ? 
           (isImageUrl(image) ? image.trim() : (generatedImageUrl.trim() || image.trim())) 
@@ -624,6 +627,7 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
       setGeneratedImageUrl("");
       setLanguage("");
       setTags("");
+      setIsPrivate(false);
       setQuestions([{ question: "", answers: ["", "", "", ""], correctAnswer: 0, image: "", time: 30, imageValidationStatus: 'idle', imagePreviewUrl: null, imageDescriptionGenerationStatus: 'idle', generatedImageUrl: null }]);
       // Reset image generation state
       setImageGenerationStatus('idle');
@@ -783,6 +787,18 @@ const CreateQuiz: React.FC<{ user: FirebaseUser | null }> = ({ user }) => {
             onChange={(e) => setTags(e.target.value)}
             placeholder="e.g. math, science, trivia"
           />
+        </div>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="isPrivate"
+            className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+            checked={isPrivate}
+            onChange={(e) => setIsPrivate(e.target.checked)}
+          />
+          <label htmlFor="isPrivate" className="ml-2 block text-sm font-semibold text-gray-900">
+            Make this quiz Private (only visible to you)
+          </label>
         </div>
         <div>
           <label className="block font-semibold">Description</label>

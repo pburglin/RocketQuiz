@@ -25,15 +25,20 @@ export default function FeaturedQuizzes() {
       setLoading(true);
       setError(null);
       try {
-        // Query for the latest 4 quizzes based on a 'createdAt' field
+        // Query for the latest quizzes based on a 'createdAt' field
         const quizzesRef = collection(db, "quizzes");
-        const q = query(quizzesRef, orderBy("createdAt", "desc"), limit(4));
+        // Fetch slightly more to filter client-side
+        const q = query(quizzesRef, orderBy("createdAt", "desc"), limit(20));
         const querySnapshot = await getDocs(q);
 
-        const quizList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const quizList = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          } as Quiz))
+          .filter(quiz => !quiz.isPrivate) // Client-side filtering
+          .slice(0, 4); // Take top 4
+
         setQuizzes(quizList);
       } catch {
         // Log the error for debugging purposes if needed

@@ -128,5 +128,12 @@
 
 - [DONE] in some environments like company networks, image websites like Pollinations.ai are blocked. in these cases, instead of showing broken images, I want our app to automatically fallback to use of random solid colors.
 
-- [OPEN] **Private Quizzes**
+- [DONE] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if a quiz is marked as private then only the user who created the quiz can see it, play it in single player mode and host it in multiplayer.
+  - Added `isPrivate` field to `Quiz` interface in `types.ts`
+  - Updated `CreateQuiz.tsx` to include "Make this quiz Private" checkbox
+  - Modified `SearchQuiz.tsx` and `FeaturedQuizzes.tsx` to filter out private quizzes using client-side filtering to avoid Firestore compound query issues
+  - Updated `Profile.tsx` to display user's own quizzes with public/private status indicators
+  - User's private quizzes are visible only in their profile, allowing them to play or host them
+  - Fixed route paths in `Profile.tsx` to correctly point to quiz details and multiplayer lobby
+  - Build completed successfully with no errors

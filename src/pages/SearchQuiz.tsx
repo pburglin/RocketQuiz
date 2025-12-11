@@ -59,10 +59,12 @@ export default function SearchQuiz() {
       setError(null);
       try {
         const querySnapshot = await getDocs(collection(db, "quizzes"));
-        const quizList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const quizList = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((quiz: any) => !quiz.isPrivate); // Client-side filtering
         setQuizzes(quizList as Quiz[]); // Cast the result
       } catch (err: unknown) { // Use unknown for error type
         console.error("Error fetching quizzes:", err); // Log the error

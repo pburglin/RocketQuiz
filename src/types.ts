@@ -12,6 +12,8 @@ export interface Quiz {
   tags?: string[];
   image?: string;
   language?: string;
+  isPrivate?: boolean;
+  createdBy?: string; // UID of the creator
   [key: string]: unknown; // Allow additional properties
 }
 

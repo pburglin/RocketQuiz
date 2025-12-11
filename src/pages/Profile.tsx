@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth } from "../firebaseClient";
+import { useNavigate, Link } from "react-router-dom"; // Add Link
+import { auth, db } from "../firebaseClient"; // Add db
 import { deleteUser, User as FirebaseUser } from "firebase/auth";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore"; // Add Firestore functions
+import { Lock, Globe } from "lucide-react"; // Import icons
 
 type ProfileProps = {
   user: FirebaseUser | null;
 };
+
+// Define Quiz interface for type safety
+interface Quiz {
+  id: string;
+  title: string;
+  isPrivate?: boolean;
+  createdAt?: { seconds: number; nanoseconds: number }; // Firestore Timestamp
+}
 
 const NICKNAME_KEY = "rocketquiz_nickname";
 // const THEME_KEY = "rocketquiz_theme"; // Theme is likely handled globally now
@@ -15,6 +25,8 @@ export default function Profile({ user }: ProfileProps) {
   const [nickname, setNickname] = useState("");
   // const [theme, setTheme] = useState<"light" | "dark">("light"); // Remove local theme state
   const [loading, setLoading] = useState(false);
+  const [userQuizzes, setUserQuizzes] = useState<Quiz[]>([]); // State for user's quizzes
+  const [quizzesLoading, setQuizzesLoading] = useState(true); // State for quizzes loading
 
   // Load nickname from localStorage on mount
   useEffect(() => {
@@ -23,6 +35,35 @@ export default function Profile({ user }: ProfileProps) {
     // const storedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light";
     // setTheme(storedTheme);
   }, []);
+
+  // Fetch user's quizzes
+  useEffect(() => {
+    const fetchUserQuizzes = async () => {
+      if (!user) return;
+      
+      setQuizzesLoading(true);
+      try {
+        const quizzesRef = collection(db, "quizzes");
+        const q = query(
+          quizzesRef, 
+          where("createdBy", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+        const quizzes = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Quiz[];
+        setUserQuizzes(quizzes);
+      } catch (error) {
+        console.error("Error fetching user quizzes:", error);
+      } finally {
+        setQuizzesLoading(false);
+      }
+    };
+
+    fetchUserQuizzes();
+  }, [user]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -99,32 +140,51 @@ export default function Profile({ user }: ProfileProps) {
           Save Nickname
         </button>
       </div>
-      {/* Remove UI Theme selection section */}
-      {/* <div className="mb-4">
-        <label className="block font-semibold mb-1 text-gray-700">UI Theme</label>
-        <div className="flex gap-4">
-          <label>
-            <input
-              type="radio"
-              name="theme"
-              value="light"
-              checked={true} // Default or based on global state
-              // onChange={handleThemeChange} // Removed
-            />
-            <span className="ml-1">Light</span>
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="theme"
-              value="dark"
-              checked={false} // Default or based on global state
-              // onChange={handleThemeChange} // Removed
-            />
-            <span className="ml-1">Dark</span>
-          </label>
-        </div>
-      </div> */}
+
+      <div className="mt-8 mb-4">
+        <h2 className="text-xl font-bold mb-4">My Quizzes</h2>
+        {quizzesLoading ? (
+          <div className="text-gray-500">Loading your quizzes...</div>
+        ) : userQuizzes.length === 0 ? (
+          <div className="text-gray-500">You haven't created any quizzes yet.</div>
+        ) : (
+          <div className="grid gap-4">
+            {userQuizzes.map((quiz) => (
+              <div key={quiz.id} className="p-4 border rounded bg-white shadow-sm flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-lg">{quiz.title}</h3>
+                  <div className="flex items-center text-sm text-gray-500 mt-1">
+                    {quiz.isPrivate ? (
+                      <span className="flex items-center text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        <Lock className="w-3 h-3 mr-1" /> Private
+                      </span>
+                    ) : (
+                      <span className="flex items-center text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                        <Globe className="w-3 h-3 mr-1" /> Public
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                   <Link 
+                    to={`/play/quiz/${quiz.id}/details`}
+                    className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary/90"
+                  >
+                    Play
+                  </Link>
+                  <Link 
+                    to={`/play/quiz/${quiz.id}/multiplayer/lobby`}
+                    className="px-3 py-1 bg-secondary text-white text-sm rounded hover:bg-secondary/90"
+                  >
+                    Host
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="mt-8">
         <button
           className="px-4 py-2 text-white rounded bg-error hover:bg-error/90 disabled:opacity-50" // Use error color
