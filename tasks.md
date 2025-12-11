@@ -68,15 +68,39 @@
   - Updated UI with clear placeholder text and combined validation/generation indicators
   - Build completed successfully with no TypeScript errors
 
-- [OPEN] the Firebase Firestore database shows increased number of database reads. this happened in a period when we had larger number of concurrent users playing a quiz. to avoid scalability issues and Firestorm service outages, lets review the quiz logic, and identify opportunities to reduce database reads with more aggressive caching while being very careful not to break existing multiplayer quiz functionality.
+- [DONE] **Database Read Optimization**
+  - The Firebase Firestore database shows increased number of database reads. this happened in a period when we had larger number of concurrent users playing a quiz. to avoid scalability issues and Firestorm service outages, lets review the quiz logic, and identify opportunities to reduce database reads with more aggressive caching while being very careful not to break existing multiplayer quiz functionality.
+  - Created comprehensive quiz caching utility with 10-minute TTL and automatic cleanup
+  - Implemented caching in SinglePlayerPage, QuizDetailsPage, and MillionaireChallengePage
+  - Optimized quiz data fetching with batch operations for questions and answers
+  - Added cache statistics and monitoring capabilities
+  - Build completed successfully with no errors
 
-- [OPEN] implement WebGL animation effect during the quiz with movement in sync with the song beat. Change the color of the WebGL effect from green, to orange to red the closer we are for the timer to end.
+- [DONE] implement WebGL animation effect during the quiz with movement in sync with the song beat. Change the color of the WebGL effect from green, to orange to red the closer we are for the timer to end.
+  - Created BeatSyncAnimation component with beat synchronization using fixed 0.25s intervals
+  - Implemented color transitions: green (fresh) → orange (mid-time) → red (time running out)
+  - Added radial particle system with safe zone around quiz content to avoid UI interference
+  - Removed audioContextRef to fix music stopping issue on Next button clicks
+  - Removed fade out functionality for uninterrupted music playback
+  - WebGL artifacts now avoid quiz question, options, and UI buttons area
+  - Particles arranged in rings around safe zone with connecting arcs for visual appeal
+  - Integrated animation into both SinglePlayerPage and MultiplayerGamePage
+  - Added particle explosion effect when answer is selected (replaces disappearing animation)
+  - Explosion creates 60 particles that fly out in all directions with physics and fade effects
+  - Fixed state management to properly trigger explosion on answer selection
+  - Implemented explosion effect for both single-player and multiplayer modes
+  - Fixed explosion effect by separating particle types (BeatParticle vs ExplosionParticle)
+  - Resolved TypeScript errors and improved explosion particle visibility
+  - Explosion particles now properly travel to screen edges with enhanced visual effects
+  - Build completed successfully with no errors
 
 - [DONE] in README.md and About screen, credit "Suno.com" for the music. "Pollinations.ai" for image generation. "Netlify.com" for hosting the app. Google Firebase for persistence.
    - Added comprehensive credits section to README.md under "Credits" heading
    - Added "Credits" section to About.tsx with formatted text for all four services
    - Credits include: Suno.com (music), Pollinations.ai (image generation), Netlify.com (hosting), Google Firebase (persistence)
    - Both files now properly acknowledge the services used in the project
+
+- [OPEN] add a Settings icon in top bar and a global Settings modal dialog to allow user to control WebGL animations and music volume. Each of these controls should be sliders with default set to mid, but that allow user to either increase or decrease all the way to zero. keep the changed values persisted in the browser local storage so that even after the user refreshes or reopen the app.
 
 - [OPEN] in multiplayer quizzes, lets implement a control to let quiz host user turn music volume down for all quiz players. show the music controls in the quiz lobby and during the quiz, but only for the quiz host user. the quiz host user can lower the volume all the way down to zero, completely turning off the music. as the volume is changed, all players registered for the multiplayer quiz also have their music volume updated to match the configuration set by the quiz host user.
 

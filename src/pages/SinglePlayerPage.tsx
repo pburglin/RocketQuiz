@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SinglePlayerSession from "../components/SinglePlayerSession";
+import BeatSyncAnimation from "../components/BeatSyncAnimation";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { Helmet } from 'react-helmet-async';
+import { fetchQuizWithCache } from "../utils/quizCache";
 
 export default function SinglePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +47,18 @@ export default function SinglePlayerPage() {
   // Music playback state
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [triggerExplosion, setTriggerExplosion] = useState(false);
+  const [isAnimationActive, setIsAnimationActive] = useState(false);
+  
+  // Track explosion state for animation
+  useEffect(() => {
+    if (triggerExplosion) {
+      setIsAnimationActive(true);
+      setTimeout(() => {
+        setIsAnimationActive(false);
+      }, 2000); // Allow 2 seconds for explosion animation
+    }
+  }, [triggerExplosion]);
 
   // Clear previous game data from localStorage
   useEffect(() => {
@@ -69,41 +83,74 @@ export default function SinglePlayerPage() {
           setLoading(false);
           return;
         }
-        const quizDoc = await getDoc(doc(db, "quizzes", id));
-        if (!quizDoc.exists()) {
-          setError("Quiz not found.");
-          setLoading(false);
-          return;
-        }
-        const quizData = quizDoc.data();
+        
+        // Use cached quiz data
+        const quizData = await fetchQuizWithCache(id, async () => {
+          // Fetch quiz document
+          const quizDoc = await getDoc(doc(db, "quizzes", id));
+          if (!quizDoc.exists()) {
+            throw new Error("Quiz not found");
+          }
+          
+          const quizInfo = quizDoc.data();
+          
+          // Fetch questions
+          const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+          const questionsArr: Question[] = [];
+          
+          // Fetch questions and answers in batch
+          const questionPromises = questionsSnap.docs.map(async (qDoc) => {
+            const qData = qDoc.data();
+            const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
+            const answersArr: string[] = [];
+            
+            answersSnap.forEach((aDoc) => {
+              const aData = aDoc.data();
+              answersArr[aData.index] = aData.answer;
+            });
+            
+            return {
+              id: qDoc.id,
+              question: qData.question,
+              answers: answersArr,
+              correctAnswer: qData.correctAnswer,
+              image: qData.image,
+              time: typeof qData.time === "number" ? qData.time : 30,
+            };
+          });
+          
+          const resolvedQuestions = await Promise.all(questionPromises);
+          
+          return {
+            id: quizDoc.id,
+            title: quizInfo.title || "Untitled Quiz",
+            description: quizInfo.description,
+            image: quizInfo.image,
+            language: quizInfo.language,
+            tags: quizInfo.tags,
+            questions: resolvedQuestions,
+            createdAt: quizInfo.createdAt,
+            updatedAt: quizInfo.updatedAt,
+          };
+        });
+        
+        // Set quiz data
         setQuiz({
-          id: quizDoc.id,
-          title: quizData.title || "Untitled Quiz", // Ensure title exists
+          id: quizData.id,
+          title: quizData.title,
+          description: quizData.description,
+          image: quizData.image,
+          language: quizData.language,
+          tags: quizData.tags,
           ...quizData,
-        } as Quiz); // Cast to Quiz type
-
-        const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-        const questionsArr: Question[] = []; // Use Question type
-        for (const qDoc of questionsSnap.docs) {
-          const qData = qDoc.data();
-          const answersSnap = await getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"));
-          const answersArr: string[] = [];
-          answersSnap.forEach((aDoc) => {
-            const aData = aDoc.data();
-            answersArr[aData.index] = aData.answer;
-          });
-          questionsArr.push({
-            id: qDoc.id,
-            question: qData.question,
-            answers: answersArr,
-            correctAnswer: qData.correctAnswer,
-            image: qData.image,
-            time: typeof qData.time === "number" ? qData.time : 30,
-          });
-        }
-        setQuestions(questionsArr);
-        setTimer(questionsArr[0]?.time || 30);
-      } catch { // Remove unused err
+        });
+        
+        // Set questions
+        setQuestions(quizData.questions);
+        setTimer(quizData.questions[0]?.time || 30);
+        
+      } catch (err) {
+        console.error("Error fetching quiz:", err);
         setError("Failed to load quiz.");
       } finally {
         setLoading(false);
@@ -225,6 +272,16 @@ export default function SinglePlayerPage() {
         <title>{quiz?.title ? `${quiz.title} - Single Player - RocketQuiz` : 'Single Player Quiz - RocketQuiz'}</title>
         <meta name="description" content={quiz?.title ? `Play the ${quiz.title} quiz in single-player mode on RocketQuiz.` : 'Play a quiz in single-player mode on RocketQuiz.'} />
       </Helmet>
+      <BeatSyncAnimation
+        isActive={timer > 0 && !showAnswer && questions.length > 0}
+        timer={timer}
+        maxTime={questions[current]?.time || 30}
+        audioRef={audioRef}
+        intensity={60}
+        triggerExplosion={triggerExplosion}
+        showExplosion={triggerExplosion}
+        onExplosionComplete={() => setTriggerExplosion(false)}
+      />
       <SinglePlayerSession
         quiz={quiz}
         questions={questions}
@@ -245,6 +302,9 @@ export default function SinglePlayerPage() {
         nextQuestionTimer={nextQuestionTimer}
         setNextQuestionTimer={setNextQuestionTimer}
         timerRef={timerRef}
+        triggerExplosion={triggerExplosion}
+        onExplosionComplete={() => setTriggerExplosion(false)}
+        onTriggerExplosion={() => setTriggerExplosion(true)}
         onQuit={() => {
           fadeOutAndStopMusic(); // Stop music when quitting
           navigate(`/play/quiz/${id}/details`);

@@ -65,6 +65,9 @@ interface MultiplayerSessionProps {
   onQuit?: () => void; // Make optional if not always provided
   onFinish: () => Promise<void>;
   isOrganizer: boolean;
+  triggerExplosion?: boolean;
+  onExplosionComplete?: () => void;
+  onTriggerExplosion?: () => void;
 }
 
 // Define the structure for shuffled answers
@@ -104,6 +107,9 @@ export default function MultiplayerSession({
   onQuit,
   onFinish,
   isOrganizer,
+  triggerExplosion = false,
+  onExplosionComplete,
+  onTriggerExplosion
 }: MultiplayerSessionProps) { // Use the defined interface
   const q = questions.length > 0 ? questions[current] : null;
   const isLastQuestion = current === questions.length - 1;
@@ -198,7 +204,13 @@ export default function MultiplayerSession({
               }
             `}
             disabled={mpShowAnswer || mpAnswered || (isOrganizer && !players.includes(nickname))}
-            onClick={() => submitMpAnswer(answer.originalIndex)} // Pass original index
+            onClick={() => {
+              // Trigger explosion animation via callback
+              if (onTriggerExplosion) {
+                onTriggerExplosion();
+              }
+              submitMpAnswer(answer.originalIndex);
+            }} // Pass original index
             style={{
               opacity: (mpAnswered && mpSelected !== answer.originalIndex) || (isOrganizer && !players.includes(nickname)) ? 0.5 : 1,
               pointerEvents: mpShowAnswer || (mpAnswered && mpSelected !== answer.originalIndex) || (isOrganizer && !players.includes(nickname)) ? "none" : "auto",

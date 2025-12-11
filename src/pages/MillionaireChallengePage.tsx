@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs, DocumentData } from "firebase/firestore";
+import { fetchQuizWithCache } from "../utils/quizCache";
 
 // Define interfaces for better type safety
 interface Quiz {
@@ -88,57 +89,92 @@ export default function MillionaireChallengePage() {
           setLoading(false);
           return;
         }
-        const quizDoc = await getDoc(doc(db, "quizzes", id));
-        if (!quizDoc.exists()) {
-          setError("Quiz not found.");
-          setLoading(false);
-          return;
-        }
-        const quizData = quizDoc.data() as DocumentData;
-        setQuiz({
-          id: quizDoc.id,
-          ...quizData,
-        } as Quiz);
-
-        const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-        const questionDocs = questionsSnap.docs;
-
-        const answerPromises = questionDocs.map(qDoc =>
-          getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"))
-        );
-
-        const answerSnapshots = await Promise.all(answerPromises);
-
-        const questionsArr = questionDocs.map((qDoc, index) => {
-          const qData = qDoc.data();
-          const answersSnap = answerSnapshots[index];
-          const answersArr: string[] = [];
-          answersSnap.forEach((aDoc) => {
-            const aData = aDoc.data();
-            if (aData.index >= answersArr.length) {
-              answersArr.length = aData.index + 1;
-            }
-            answersArr[aData.index] = aData.answer;
-          });
-          for (let i = 0; i < answersArr.length; i++) {
-            if (answersArr[i] === undefined) answersArr[i] = "";
+        
+        // Use cached quiz data
+        const quizData = await fetchQuizWithCache(id, async () => {
+          // Fetch quiz document
+          const quizDoc = await getDoc(doc(db, "quizzes", id));
+          if (!quizDoc.exists()) {
+            throw new Error("Quiz not found");
           }
-
+          
+          const quizInfo = quizDoc.data();
+          
+          // Fetch questions
+          const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+          const questionDocs = questionsSnap.docs;
+          
+          // Fetch questions and answers in batch
+          const answerPromises = questionDocs.map(qDoc =>
+            getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"))
+          );
+          
+          // Wait for all answer fetches to complete
+          const answerSnapshots = await Promise.all(answerPromises);
+          
+          // Process questions and their fetched answers
+          const questionsArr = questionDocs.map((qDoc, index) => {
+            const qData = qDoc.data();
+            const answersSnap = answerSnapshots[index];
+            const answersArr: string[] = [];
+            
+            answersSnap.forEach((aDoc) => {
+              const aData = aDoc.data();
+              if (aData.index >= answersArr.length) {
+                answersArr.length = aData.index + 1;
+              }
+              answersArr[aData.index] = aData.answer;
+            });
+            for (let i = 0; i < answersArr.length; i++) {
+              if (answersArr[i] === undefined) answersArr[i] = "";
+            }
+            
+            return {
+              id: qDoc.id,
+              question: qData.question,
+              answers: answersArr,
+              correctAnswer: qData.correctAnswer,
+              image: qData.image,
+              time: typeof qData.time === "number" ? qData.time : 30,
+            };
+          });
+          
           return {
-            id: qDoc.id,
-            question: qData.question,
-            answers: answersArr,
-            correctAnswer: qData.correctAnswer,
-            image: qData.image,
-            time: typeof qData.time === "number" ? qData.time : 30,
+            id: quizDoc.id,
+            title: quizInfo.title || "",
+            description: quizInfo.description || "",
+            tags: quizInfo.tags || [],
+            image: quizInfo.image || "",
+            popularity: quizInfo.popularity,
+            language: quizInfo.language || "",
+            averageRating: quizInfo.averageRating,
+            ratingCount: quizInfo.ratingCount,
+            questionCount: quizInfo.questionCount,
+            questions: questionsArr,
+            createdAt: quizInfo.createdAt,
+            updatedAt: quizInfo.updatedAt,
           };
         });
-
-        // TODO: Implement question ordering based on historical accuracy
-        // For now, using questions as fetched and shuffling them
-        const shuffledQuestions = questionsArr.sort(() => Math.random() - 0.5); // Simple shuffle for now
+        
+        // Set quiz data
+        setQuiz({
+          id: quizData.id,
+          title: quizData.title,
+          description: quizData.description,
+          tags: quizData.tags,
+          image: quizData.image,
+          popularity: quizData.popularity,
+          language: quizData.language,
+          averageRating: quizData.averageRating,
+          ratingCount: quizData.ratingCount,
+          questionCount: quizData.questionCount,
+          ...quizData,
+        });
+        
+        // Shuffle questions for millionaire challenge
+        const shuffledQuestions = quizData.questions.sort(() => Math.random() - 0.5);
         setQuestions(shuffledQuestions);
-
+        
       } catch (err) {
         console.error("Failed to load quiz:", err);
         setError("Failed to load quiz.");

@@ -4,6 +4,7 @@ import QuizDetails from "../components/QuizDetails";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs, DocumentData } from "firebase/firestore";
 import { Helmet } from 'react-helmet-async';
+import { fetchQuizWithCache } from "../utils/quizCache";
 
 // Define interfaces for better type safety
 interface Quiz {
@@ -48,60 +49,95 @@ export default function QuizDetailsPage() {
           setLoading(false);
           return;
         }
-        const quizDoc = await getDoc(doc(db, "quizzes", id));
-        if (!quizDoc.exists()) {
-          setError("Quiz not found.");
-          setLoading(false);
-          return;
-        }
-        const quizData = quizDoc.data() as DocumentData; // Cast to DocumentData initially
-        setQuiz({
-          id: quizDoc.id,
-          ...quizData,
-        } as Quiz); // Assert as Quiz type when setting state
-
-        // Fetch questions
-        const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
-        const questionDocs = questionsSnap.docs;
-
-        // Create promises to fetch answers for all questions concurrently
-        const answerPromises = questionDocs.map(qDoc =>
-          getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"))
-        );
-
-        // Wait for all answer fetches to complete
-        const answerSnapshots = await Promise.all(answerPromises);
-
-        // Process questions and their fetched answers
-        const questionsArr = questionDocs.map((qDoc, index) => {
-          const qData = qDoc.data();
-          const answersSnap = answerSnapshots[index];
-          const answersArr: string[] = [];
-          answersSnap.forEach((aDoc) => {
-            const aData = aDoc.data();
-            // Ensure array is large enough, handle potential gaps if indices aren't sequential
-            if (aData.index >= answersArr.length) {
-              answersArr.length = aData.index + 1;
-            }
-            answersArr[aData.index] = aData.answer;
-          });
-          // Fill potential gaps with empty strings or a placeholder if needed
-          for (let i = 0; i < answersArr.length; i++) {
-            if (answersArr[i] === undefined) answersArr[i] = "";
+        
+        // Use cached quiz data
+        const quizData = await fetchQuizWithCache(id, async () => {
+          // Fetch quiz document
+          const quizDoc = await getDoc(doc(db, "quizzes", id));
+          if (!quizDoc.exists()) {
+            throw new Error("Quiz not found");
           }
-
+          
+          const quizInfo = quizDoc.data();
+          
+          // Fetch questions
+          const questionsSnap = await getDocs(collection(db, "quizzes", id, "questions"));
+          const questionDocs = questionsSnap.docs;
+          
+          // Create promises to fetch answers for all questions concurrently
+          const answerPromises = questionDocs.map(qDoc =>
+            getDocs(collection(db, "quizzes", id, "questions", qDoc.id, "answers"))
+          );
+          
+          // Wait for all answer fetches to complete
+          const answerSnapshots = await Promise.all(answerPromises);
+          
+          // Process questions and their fetched answers
+          const questionsArr = questionDocs.map((qDoc, index) => {
+            const qData = qDoc.data();
+            const answersSnap = answerSnapshots[index];
+            const answersArr: string[] = [];
+            
+            answersSnap.forEach((aDoc) => {
+              const aData = aDoc.data();
+              // Ensure array is large enough, handle potential gaps if indices aren't sequential
+              if (aData.index >= answersArr.length) {
+                answersArr.length = aData.index + 1;
+              }
+              answersArr[aData.index] = aData.answer;
+            });
+            // Fill potential gaps with empty strings or a placeholder if needed
+            for (let i = 0; i < answersArr.length; i++) {
+              if (answersArr[i] === undefined) answersArr[i] = "";
+            }
+            
+            return {
+              id: qDoc.id,
+              question: qData.question,
+              answers: answersArr,
+              correctAnswer: qData.correctAnswer,
+              image: qData.image,
+              time: typeof qData.time === "number" ? qData.time : 30,
+            };
+          });
+          
           return {
-            id: qDoc.id,
-            question: qData.question,
-            answers: answersArr,
-            correctAnswer: qData.correctAnswer,
-            image: qData.image,
-            time: typeof qData.time === "number" ? qData.time : 30,
+            id: quizDoc.id,
+            title: quizInfo.title || "",
+            description: quizInfo.description || "",
+            tags: quizInfo.tags || [],
+            image: quizInfo.image || "",
+            popularity: quizInfo.popularity,
+            language: quizInfo.language || "",
+            averageRating: quizInfo.averageRating,
+            ratingCount: quizInfo.ratingCount,
+            questionCount: quizInfo.questionCount,
+            questions: questionsArr,
+            createdAt: quizInfo.createdAt,
+            updatedAt: quizInfo.updatedAt,
           };
         });
-
-        setQuestions(questionsArr);
-      } catch { // Remove unused 'err' variable
+        
+        // Set quiz data
+        setQuiz({
+          id: quizData.id,
+          title: quizData.title,
+          description: quizData.description,
+          tags: quizData.tags,
+          image: quizData.image,
+          popularity: quizData.popularity,
+          language: quizData.language,
+          averageRating: quizData.averageRating,
+          ratingCount: quizData.ratingCount,
+          questionCount: quizData.questionCount,
+          ...quizData,
+        });
+        
+        // Set questions
+        setQuestions(quizData.questions);
+        
+      } catch (err) {
+        console.error("Error fetching quiz:", err);
         setError("Failed to load quiz.");
       } finally {
         setLoading(false);

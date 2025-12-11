@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MultiplayerSession from "../components/MultiplayerSession";
+import BeatSyncAnimation from "../components/BeatSyncAnimation";
 import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp, updateDoc, addDoc, Timestamp, increment } from "firebase/firestore";
 import { Helmet } from 'react-helmet-async';
@@ -45,6 +46,7 @@ export default function MultiplayerGamePage() {
   // Music playback state
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [triggerExplosion, setTriggerExplosion] = useState(false);
 
   useEffect(() => {
     async function fetchQuiz() {
@@ -343,6 +345,16 @@ export default function MultiplayerGamePage() {
         <title>{quiz?.title ? `${quiz.title} - Multiplayer Game - RocketQuiz` : 'Multiplayer Game - RocketQuiz'}</title>
         <meta name="description" content={quiz?.title ? `Playing the ${quiz.title} quiz in multiplayer mode on RocketQuiz.` : 'Play a multiplayer quiz game on RocketQuiz.'} />
       </Helmet>
+      <BeatSyncAnimation
+        isActive={mpTimer > 0 && !mpShowAnswer && questions.length > 0}
+        timer={mpTimer}
+        maxTime={questions[current]?.time || 30}
+        audioRef={audioRef}
+        intensity={60}
+        triggerExplosion={triggerExplosion}
+        showExplosion={triggerExplosion}
+        onExplosionComplete={() => setTriggerExplosion(false)}
+      />
       <MultiplayerSession
         onFinish={async () => {
           if (!isOrganizer || !sessionId) return;
@@ -540,76 +552,79 @@ export default function MultiplayerGamePage() {
       nickname={nickname}
       sessionId={sessionId}
       isOrganizer={isOrganizer}
-      submitMpAnswer={async (idx: number) => {
-        console.log("submitMpAnswer called", { idx, sessionId, nickname, current });
-        if (!sessionId || !nickname) {
-          console.error("Missing sessionId or nickname", { sessionId, nickname });
-          return;
-        }
-        setMpSelected(idx);
-        setMpAnswered(true);
-        try {
-          // Get the current question
-          const q = questions[current];
-          const isCorrect = q && idx === q.correctAnswer;
-          
-          // Get the question start time from the session document
-          const sessionRef = doc(db, "sessions", sessionId);
-          const sessionSnap = await getDoc(sessionRef);
-          let questionStart = null;
-          
-          if (sessionSnap.exists()) {
-            const sessionData = sessionSnap.data();
-            // Try both field names for backward compatibility
-            if (sessionData.questionStartTimes && sessionData.questionStartTimes[current]) {
-              questionStart = sessionData.questionStartTimes[current];
-            } else if (sessionData.questionStarts && sessionData.questionStarts[current]) {
-              questionStart = sessionData.questionStarts[current];
-            } else if (sessionData.questionStart) {
-              questionStart = sessionData.questionStart;
+        triggerExplosion={triggerExplosion}
+        onExplosionComplete={() => setTriggerExplosion(false)}
+        onTriggerExplosion={() => setTriggerExplosion(true)}
+        submitMpAnswer={async (idx: number) => {
+          console.log("submitMpAnswer called", { idx, sessionId, nickname, current });
+          if (!sessionId || !nickname) {
+            console.error("Missing sessionId or nickname", { sessionId, nickname });
+            return;
+          }
+          setMpSelected(idx);
+          setMpAnswered(true);
+          try {
+            // Get the current question
+            const q = questions[current];
+            const isCorrect = q && idx === q.correctAnswer;
+            
+            // Get the question start time from the session document
+            const sessionRef = doc(db, "sessions", sessionId);
+            const sessionSnap = await getDoc(sessionRef);
+            let questionStart = null;
+            
+            if (sessionSnap.exists()) {
+              const sessionData = sessionSnap.data();
+              // Try both field names for backward compatibility
+              if (sessionData.questionStartTimes && sessionData.questionStartTimes[current]) {
+                questionStart = sessionData.questionStartTimes[current];
+              } else if (sessionData.questionStarts && sessionData.questionStarts[current]) {
+                questionStart = sessionData.questionStarts[current];
+              } else if (sessionData.questionStart) {
+                questionStart = sessionData.questionStart;
+              }
             }
-          }
-          
-          // Write answer to Firestore
-          // Create a reference to the 'answers' subcollection
-          const answersCollectionRef = collection(db, "sessions", sessionId, "answers");
-          // Add a new document for this answer, including the nickname
-          await addDoc(answersCollectionRef, {
-            nickname: nickname, // Store the nickname within the answer document
-            qIdx: current,
-            answer: idx,
-            answeredAt: serverTimestamp(),
-            isCorrect: isCorrect,
-            questionStart: questionStart // Include the question start time
-          });
-          
-          console.log("Answer written to Firestore", {
-            sessionId,
-            nickname,
-            idx,
-            current,
-            isCorrect,
-            correctAnswer: q?.correctAnswer,
-            questionStart: questionStart
-          });
-          
-          // Update running score in session document
-          if (isCorrect) {
-            // We'll calculate the actual score when all questions are answered
-            // This is just to keep track of correct answers
-            await updateDoc(sessionRef, {
-              [`playerCorrectAnswers.${nickname}.${current}`]: true
+            
+            // Write answer to Firestore
+            // Create a reference to the 'answers' subcollection
+            const answersCollectionRef = collection(db, "sessions", sessionId, "answers");
+            // Add a new document for this answer, including the nickname
+            await addDoc(answersCollectionRef, {
+              nickname: nickname, // Store the nickname within the answer document
+              qIdx: current,
+              answer: idx,
+              answeredAt: serverTimestamp(),
+              isCorrect: isCorrect,
+              questionStart: questionStart // Include the question start time
             });
+            
+            console.log("Answer written to Firestore", {
+              sessionId,
+              nickname,
+              idx,
+              current,
+              isCorrect,
+              correctAnswer: q?.correctAnswer,
+              questionStart: questionStart
+            });
+            
+            // Update running score in session document
+            if (isCorrect) {
+              // We'll calculate the actual score when all questions are answered
+              // This is just to keep track of correct answers
+              await updateDoc(sessionRef, {
+                [`playerCorrectAnswers.${nickname}.${current}`]: true
+              });
+            }
+          } catch (err) {
+            console.error("Error writing answer to Firestore", err);
           }
-        } catch (err) {
-          console.error("Error writing answer to Firestore", err);
-        }
-      }}
-      onQuit={() => {
-        fadeOutAndStopMusic(); // Stop music when quitting
-        navigate(`/play/quiz/${id}/details`);
-      }}
-    />
+        }}
+        onQuit={() => {
+          fadeOutAndStopMusic(); // Stop music when quitting
+          navigate(`/play/quiz/${id}/details`);
+        }}
+      />
     </>
   );
 }

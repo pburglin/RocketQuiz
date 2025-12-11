@@ -41,6 +41,9 @@ interface SinglePlayerSessionProps {
   timerRef: React.MutableRefObject<NodeJS.Timeout | null>; // Correct type
   onQuit: () => void;
   onFinish: () => void;
+  triggerExplosion?: boolean;
+  onExplosionComplete?: () => void;
+  onTriggerExplosion?: () => void;
 }
 
 // Define the structure for shuffled answers
@@ -72,6 +75,9 @@ export default function SinglePlayerSession({
   timerRef,
   onQuit,
   onFinish,
+  triggerExplosion = false,
+  onExplosionComplete,
+  onTriggerExplosion
 }: SinglePlayerSessionProps) { // Use the defined interface
 
   // Reset correctAnswers when starting a new game (when current is 0 and not showing answer)
@@ -117,6 +123,12 @@ export default function SinglePlayerSession({
   // Single player: handle answer click
   const handleSinglePlayerAnswer = (originalIndex: number) => { // Use originalIndex
     if (showAnswer || !q) return;
+    
+    // Trigger explosion animation via callback
+    if (onTriggerExplosion) {
+      onTriggerExplosion();
+    }
+    
     setSpSelected(originalIndex); // Store the original index
     setShowAnswer(true);
     if (timerRef.current) clearInterval(timerRef.current);
