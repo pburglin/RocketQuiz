@@ -6,6 +6,60 @@ Check it out here: [https://rocketquiz.us](https://rocketquiz.us)
 
 ---
 
+## 🎄 Xmas Release (December 2025)
+
+We're excited to announce our festive **Xmas Release** featuring major enhancements to quiz creation, multiplayer experience, and visual effects!
+
+### 🆕 New Features
+
+#### 🔐 **Private Quiz Functionality**
+- **Private Quiz Access:** Users can now create and access private quizzes for exclusive gameplay
+- Enhanced quiz privacy controls for content creators
+
+#### 🎵 **Enhanced Audio Experience**
+- **Quiz Countdown Music:** Added countdown music with smooth fade-out effects
+- **Music Host Controls:** Multiplayer hosts now have complete control over background music
+- **Audio Integration:** Seamless audio experience throughout quiz sessions
+
+#### 🎨 **Visual Effects & Animations**
+- **WebGL Confetti Effects:** Celebration animations on quiz results pages
+- **Answer Explosion Effects:** Dynamic visual feedback for multiplayer quiz answers
+- **Snow Effect:** Holiday-themed snow animations for the Sindhu Edition
+- **BeatSync Animation:** Enhanced visual synchronization with quiz beats
+
+#### 🖼️ **Smart Image Management**
+- **Automatic Image Fallback:** Intelligent handling of blocked networks with fallback images
+- **AI Image Optimization:** Enhanced prompts with logging and examples for better image generation
+- **Consolidated Image Fields:** Streamlined quiz creation with unified image input
+- **Height Parameter Fix:** Prevented vertical cropping during quiz play
+- **Alternative Fix Options:** Modal confirmation for incomplete image processing
+
+#### ⚙️ **UI/UX Improvements**
+- **Settings Modal Enhancement:** Fixed modal close button colors and added click-outside-to-close functionality
+- **Ribbon Repositioning:** Moved red ribbon from top-right to top-left to avoid navigation interference
+- **Better Error Handling:** Improved LLM API error messages for enhanced user experience
+- **Service Credits:** Added comprehensive service credits to README and About pages
+
+#### 🏆 **Multiplayer Enhancements**
+- **Quit Confirmation:** Added confirmation modal for clean multiplayer session exits
+- **Real-time Effects:** Enhanced visual feedback for answer selections
+- **Host Controls:** Complete music and session management for game hosts
+
+### 🔧 Technical Improvements
+
+- **Enhanced AI Prompts:** Updated CreateQuiz AI prompts to include image descriptions for questions
+- **Improved Error Messages:** Better user experience through clearer error communication
+- **Database Optimization:** Added question count tracking to quizzes
+- **Performance Optimizations:** Streamlined image loading and fallback mechanisms
+
+### 🎅 **Special Holiday Features**
+
+- **Sindhu Edition:** Special holiday theme with music and festive elements
+- **Snow Animation:** Seasonal visual effects throughout the application
+- **Holiday Ribbon:** Beautiful decorative elements for the festive season
+
+---
+
 ## Project Plan
 
 ### 1. Features
