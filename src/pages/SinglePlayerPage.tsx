@@ -6,6 +6,7 @@ import { db } from "../firebaseClient";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { Helmet } from 'react-helmet-async';
 import { fetchQuizWithCache } from "../utils/quizCache";
+import { useSettings } from "../contexts/SettingsContext";
 
 export default function SinglePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +48,7 @@ export default function SinglePlayerPage() {
   // Music playback state
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const { settings } = useSettings();
   const [triggerExplosion, setTriggerExplosion] = useState(false);
   const [isAnimationActive, setIsAnimationActive] = useState(false);
   
@@ -163,7 +165,7 @@ export default function SinglePlayerPage() {
   useEffect(() => {
     const audio = new Audio('/TickTockTrivia.mp3');
     audio.loop = true;
-    audio.volume = 0.7; // Set initial volume
+    audio.volume = settings.musicVolume; // Use settings volume
     setAudioRef(audio);
 
     return () => {
@@ -185,7 +187,7 @@ export default function SinglePlayerPage() {
       } else {
         audioRef.pause();
         audioRef.currentTime = 0;
-        audioRef.volume = 0.7; // Reset volume for next time
+        audioRef.volume = settings.musicVolume; // Reset volume for next time
         setIsMusicPlaying(false);
       }
     };

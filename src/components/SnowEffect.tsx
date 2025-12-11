@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface SnowParticle {
   x: number;
@@ -21,6 +22,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
   maxSize = 8,
   minSize = 2
 }) => {
+  const { settings } = useSettings();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   const particlesRef = useRef<SnowParticle[]>([]);
@@ -41,10 +43,14 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // Apply animation intensity setting (0-1 scale)
+    const actualIntensity = Math.max(0, Math.floor(intensity * settings.animationIntensity));
+    console.log('[SnowEffect] Initializing snow particles, base intensity:', intensity, 'actual intensity:', actualIntensity, 'setting:', settings.animationIntensity);
+    
     // Initialize snow particles
     const initParticles = () => {
       particlesRef.current = [];
-      for (let i = 0; i < intensity; i++) {
+      for (let i = 0; i < actualIntensity; i++) {
         particlesRef.current.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height - canvas.height, // Start above the visible area
@@ -118,7 +124,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [intensity, maxSize, minSize]);
+  }, [intensity, maxSize, minSize, settings.animationIntensity]);
 
   return (
     <canvas

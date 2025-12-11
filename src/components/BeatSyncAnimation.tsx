@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface BeatParticle {
   angle: number; // Angle for radial positioning
@@ -26,7 +27,7 @@ interface BeatSyncAnimationProps {
   isActive: boolean;
   timer: number;
   maxTime: number;
-  intensity?: number; // Number of particles
+  intensity?: number; // Base number of particles (will be multiplied by settings)
   triggerExplosion?: boolean; // New prop to trigger explosion
   onExplosionComplete?: () => void; // Callback when explosion finishes
   showExplosion?: boolean; // Force show explosion even when isActive is false
@@ -41,6 +42,7 @@ const BeatSyncAnimation: React.FC<BeatSyncAnimationProps> = ({
   onExplosionComplete,
   showExplosion = false
 }) => {
+  const { settings } = useSettings();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   const particlesRef = useRef<BeatParticle[]>([]);
@@ -184,11 +186,13 @@ const BeatSyncAnimation: React.FC<BeatSyncAnimationProps> = ({
 
     // Initialize particles in radial pattern around safe zone
     const initParticles = () => {
-      console.log('[BeatSyncAnimation] Initializing particles, intensity:', intensity);
+      // Apply animation intensity setting (0-1 scale)
+      const actualIntensity = Math.max(0, Math.floor(intensity * settings.animationIntensity));
+      console.log('[BeatSyncAnimation] Initializing particles, base intensity:', intensity, 'actual intensity:', actualIntensity, 'setting:', settings.animationIntensity);
       particlesRef.current = [];
       const safeZone = getSafeZone();
       
-      for (let i = 0; i < intensity; i++) {
+      for (let i = 0; i < actualIntensity; i++) {
         // Distribute particles in rings around the safe zone
         const ringNumber = Math.floor(i / 10) + 1;
         const angleInRing = (i % 10) * (Math.PI * 2 / 10);

@@ -1,4 +1,4 @@
-import { LogIn, User, Rocket, Search, Plus, Loader2 } from "lucide-react"; // Added Loader2
+import { LogIn, User, Rocket, Search, Plus, Loader2, Settings } from "lucide-react"; // Added Loader2
 import { Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebaseClient";
@@ -7,9 +7,10 @@ import { User as FirebaseUser } from "firebase/auth"; // Import FirebaseUser typ
 interface NavbarProps {
   user: FirebaseUser | null;
   isLoading: boolean;
+  onOpenSettings?: () => void;
 }
 
-export default function Navbar({ user, isLoading }: NavbarProps) { // Updated props
+export default function Navbar({ user, isLoading, onOpenSettings }: NavbarProps) { // Updated props
   return (
     <nav className="w-full bg-primary text-white border-b border-secondary shadow-md fixed top-0 left-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
@@ -32,6 +33,16 @@ export default function Navbar({ user, isLoading }: NavbarProps) { // Updated pr
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">Create</span>
               </Link>
+          
+          {/* Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:text-secondary transition"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
     
               {/* Auth Buttons Section */}
               <div className="flex items-center gap-2">

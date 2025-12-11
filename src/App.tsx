@@ -15,6 +15,8 @@ import MillionaireChallengePage from "./pages/MillionaireChallengePage"; // Impo
 import Privacy from "./pages/Privacy";
 import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
+import SettingsModal from "./components/SettingsModal";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import { useEffect, useState } from "react";
 import { auth } from "./firebaseClient";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -22,6 +24,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true); // Track auth loading state
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   // Ensure theme is applied on every app load
   useEffect(() => {
@@ -60,9 +63,10 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      {/* Pass user directly, Navbar will handle null/loading */}
-      <Navbar user={user} isLoading={authLoading} />
+    <SettingsProvider>
+      <Router>
+        {/* Pass user directly, Navbar will handle null/loading */}
+        <Navbar user={user} isLoading={authLoading} onOpenSettings={() => setIsSettingsOpen(true)} />
       <div className="pt-16">
         {/* Optionally, prevent rendering routes until auth is loaded */}
         {/* {!authLoading && ( */}
@@ -86,7 +90,11 @@ function App() {
           <Route path="*" element={<div>Route not found</div>} />
         </Routes>
       </div>
+      
+      {/* Settings Modal */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </Router>
+    </SettingsProvider>
   );
 }
 
