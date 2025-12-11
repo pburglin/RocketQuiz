@@ -2,6 +2,7 @@ import { Tag, Play, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
+import SmartImage from "./SmartImage";
 
 export default function QuizCard({
   quiz,
@@ -37,22 +38,14 @@ export default function QuizCard({
       {typeof quiz.uniqueUsers === "number" && <meta itemProp="userInteractionCount" content={`${quiz.uniqueUsers}`} />}
       {quiz.averageRating !== undefined && <meta itemProp="aggregateRating" content={`${quiz.averageRating}`} />}
       
-      {quiz.image && quiz.image.trim() !== "" ? (
-        <img
-          src={quiz.image}
-          alt={`Cover image for ${quiz.title} quiz`}
-          className="h-40 w-full object-cover"
-          loading="lazy"
-          itemProp="image"
-        />
-      ) : (
-        <ColorCardPlaceholder
-          id={quiz.id}
-          text={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
-          className="h-40 w-full"
-          aria-hidden="true"
-        />
-      )}
+      <SmartImage
+        imageUrl={quiz.image}
+        fallbackId={quiz.id}
+        fallbackText={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
+        alt={`Cover image for ${quiz.title} quiz`}
+        className="h-40 w-full object-cover"
+        aria-label={`Cover image for ${quiz.title} quiz`}
+      />
       <div className="p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-lg text-primary mb-1" itemProp="name">{quiz.title}</h3>
         

@@ -117,7 +117,7 @@
 
 - [OPEN] in multiplayer quizzes, lets implement a control to let quiz host user turn music volume down for all quiz players. show the music controls in the quiz lobby and during the quiz, but only for the quiz host user. the quiz host user can lower the volume all the way down to zero, completely turning off the music. as the volume is changed, all players registered for the multiplayer quiz also have their music volume updated to match the configuration set by the quiz host user.
 
-- [OPEN] in some environments like company networks, image websites like Pollinations.ai are blocked. in these cases, instead of showing broken images, I want our app to automatically fallback to use of random solid colors.
+- [DONE] in some environments like company networks, image websites like Pollinations.ai are blocked. in these cases, instead of showing broken images, I want our app to automatically fallback to use of random solid colors.
 
 - [HALT] **Private Quizzes**
   - Allow users to create private quizzes. This is disabled by default, but if enabled only the user who created the quiz can see and play it.

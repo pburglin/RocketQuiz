@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
 import StarRating from "./StarRating";
+import SmartImage from "./SmartImage";
 import QuizPerformanceGraphs from "./QuizPerformanceGraphs"; // Import the new component
 import { auth, db } from "../firebaseClient"; // Import auth object and db
 import { onAuthStateChanged, User } from "firebase/auth"; // Import listener and User type
@@ -125,19 +126,14 @@ export default function QuizDetails({
   return (
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-2 text-primary">{quiz.title}</h1>
-      {quiz.image && quiz.image.trim() !== "" ? (
-        <img
-          src={quiz.image}
-          alt={quiz.title}
-          className="w-full h-48 object-cover rounded mb-4"
-        />
-      ) : (
-        <ColorCardPlaceholder
-          id={quiz.id}
-          text={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
-          className="w-full h-48 rounded mb-4"
-        />
-      )}
+      <SmartImage
+        imageUrl={quiz.image}
+        fallbackId={quiz.id}
+        fallbackText={quiz.title ? quiz.title.charAt(0).toUpperCase() : "?"}
+        alt={quiz.title}
+        className="w-full h-48 object-cover rounded mb-4"
+        aria-label={`Cover image for ${quiz.title} quiz`}
+      />
       <div className="mb-4 text-gray-600">{quiz.description}</div>
 
       {/* Display rating if available */}

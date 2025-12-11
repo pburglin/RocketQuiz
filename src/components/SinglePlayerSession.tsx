@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ColorCardPlaceholder from "./ColorCardPlaceholder";
+import SmartImage from "./SmartImage";
 
 // Define interfaces for props
 interface Quiz {
@@ -184,19 +185,14 @@ export default function SinglePlayerSession({
       <div className="mt-6 mb-2 text-lg font-semibold text-primary">
         Question {current + 1} of {questions.length}
       </div>
-      {q.image && q.image.trim() !== "" ? (
-        <img
-          src={q.image}
-          alt={`Question ${current + 1}`}
-          className="w-full h-40 object-cover rounded mb-2"
-        />
-      ) : (
-        <ColorCardPlaceholder
-          id={q.id}
-          text={q.question ? q.question.charAt(0).toUpperCase() : "?"}
-          className="w-full h-40 rounded mb-2"
-        />
-      )}
+      <SmartImage
+        imageUrl={q.image}
+        fallbackId={q.id}
+        fallbackText={q.question ? q.question.charAt(0).toUpperCase() : "?"}
+        alt={`Question ${current + 1}`}
+        className="w-full h-40 object-cover rounded mb-2"
+        aria-label={`Question ${current + 1} image`}
+      />
       <div className="mb-1 font-bold">{q.question}</div>
       <div className="mb-2">
         <span className="inline-block bg-secondary text-primary px-3 py-1 rounded text-sm font-medium">

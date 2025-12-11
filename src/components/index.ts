@@ -5,3 +5,4 @@ export { default as Footer } from "./Footer";
 export { default as StarRating } from "./StarRating";
 export { default as UserAvatar } from "./UserAvatar";
 export { default as Confetti } from "./Confetti";
+export { default as SmartImage } from "./SmartImage";
