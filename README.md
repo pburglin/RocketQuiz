@@ -144,6 +144,13 @@ Check it out here: [https://rocketquiz.us](https://rocketquiz.us)
 - **Config:** Environment variables in `.env` (see `.env.example`)
 - **Images:** Stock photos from Unsplash (linked, not downloaded)
 
+## Credits
+
+- **Music:** Suno.com - AI music generation
+- **Image Generation:** Pollinations.ai - AI image generation
+- **Hosting:** Netlify.com - Static site hosting and deployment
+- **Persistence:** Google Firebase - Database and authentication
+
 ---
 
 ## Setup

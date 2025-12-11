@@ -68,9 +68,15 @@
   - Updated UI with clear placeholder text and combined validation/generation indicators
   - Build completed successfully with no TypeScript errors
 
+- [OPEN] the Firebase Firestore database shows increased number of database reads. this happened in a period when we had larger number of concurrent users playing a quiz. to avoid scalability issues and Firestorm service outages, lets review the quiz logic, and identify opportunities to reduce database reads with more aggressive caching while being very careful not to break existing multiplayer quiz functionality.
+
 - [OPEN] implement WebGL animation effect during the quiz with movement in sync with the song beat. Change the color of the WebGL effect from green, to orange to red the closer we are for the timer to end.
 
-- [OPEN] in README.md and About screen, credit "Suno.com" for the music. "Pollinations.ai" for image generation. "Netlify.com" for hosting the app. Google Firebase for persistence.
+- [DONE] in README.md and About screen, credit "Suno.com" for the music. "Pollinations.ai" for image generation. "Netlify.com" for hosting the app. Google Firebase for persistence.
+   - Added comprehensive credits section to README.md under "Credits" heading
+   - Added "Credits" section to About.tsx with formatted text for all four services
+   - Credits include: Suno.com (music), Pollinations.ai (image generation), Netlify.com (hosting), Google Firebase (persistence)
+   - Both files now properly acknowledge the services used in the project
 
 - [OPEN] in multiplayer quizzes, lets implement a control to let quiz host user turn music volume down for all quiz players. show the music controls in the quiz lobby and during the quiz, but only for the quiz host user. the quiz host user can lower the volume all the way down to zero, completely turning off the music. as the volume is changed, all players registered for the multiplayer quiz also have their music volume updated to match the configuration set by the quiz host user.
 

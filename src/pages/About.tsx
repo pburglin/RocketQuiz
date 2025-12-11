@@ -44,6 +44,22 @@ export default function About() {
             </p>
           </section>
           
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4">Credits</h2>
+            <p className="text-gray-700 mb-2">
+              <strong>Music:</strong> Suno.com for AI music generation
+            </p>
+            <p className="text-gray-700 mb-2">
+              <strong>Image Generation:</strong> Pollinations.ai for AI image generation
+            </p>
+            <p className="text-gray-700 mb-2">
+              <strong>Hosting:</strong> Netlify.com for hosting the app
+            </p>
+            <p className="text-gray-700 mb-2">
+              <strong>Persistence:</strong> Google Firebase for database and authentication
+            </p>
+          </section>
+          
           <section>
             <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
             <p className="text-gray-700 mb-4">
