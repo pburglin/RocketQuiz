@@ -34,8 +34,14 @@
     
     <title>RocketQuiz - Create and Play Interactive Quizzes</title>
     
+    <script>
+      window.RocketMetricsConfig = {
+        endpoint: 'https://rocketwebmetrics.netlify.app/api/collect',
+        enableDebug: true
+      };
+    </script>
     <script src="https://rocketwebmetrics.netlify.app/rocket-metrics.js" async></script>
-    
+
     <!-- JSON-LD structured data -->
     <script type="application/ld+json">
     {
